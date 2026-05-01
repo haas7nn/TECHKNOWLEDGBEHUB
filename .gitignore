@@ -1,0 +1,17 @@
+﻿push_history.ps1
+uploads/*.jpg
+uploads/*.jpeg
+uploads/*.png
+uploads/*.gif
+uploads/*.mp4
+uploads/tutorials/
+uploads/avatars/
+uploads/profiles/
+uploads/temp/
+test_upload.php
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+nbproject/private/
