@@ -5,7 +5,7 @@
  * Hasan Fardan - 202301686
  */
 
-require_once '../includes/auth-check.php';
+require_once '../includes/auth-check.php';  // 
 require_once '../classes/User.php';
 
 // just basic structure for now
@@ -13,7 +13,7 @@ $page_title = 'Creator Dashboard';
 
 // getting user stats will do this right once the tutorial class is finished
 $user = new User();
-$user_stats = $user->getUserStats($current_user_id);
+$user_stats = $user->getUserStats($current_user_id);  // 
 
 // using fake data until the tutorial class is ready to query the database
 $total_tutorials = $user_stats['total_tutorials'] ?? 0;

@@ -1,11 +1,11 @@
 <?php
 /**
- * Creator Navigation Bar
- * top navigation for creator pages
+ * Viewer Navigation Bar
+ * top nav for student pages
  * Hasan Fardan - 202301686
  */
 ?>
-<nav class="creator-navbar">
+<nav class="viewer-navbar">
     <div class="navbar-brand">
         <a href="../public/index.php">
             <i class="fas fa-graduation-cap"></i>
@@ -13,23 +13,28 @@
         </a>
     </div>
     
+    <div class="navbar-search">
+        <form action="browse-tutorials.php" method="GET">
+            <i class="fas fa-search"></i>
+            <input 
+                type="text" 
+                name="search" 
+                placeholder="Search tutorials..." 
+                class="search-input"
+            >
+        </form>
+    </div>
+    
     <div class="navbar-menu">
-        <a href="dashboard.php" class="nav-link">
-            <i class="fas fa-home"></i>
-            <span>Dashboard</span>
+        <a href="browse-tutorials.php" class="nav-link">
+            <i class="fas fa-th"></i>
+            <span>Browse</span>
         </a>
         
-        <a href="my-tutorials.php" class="nav-link">
-            <i class="fas fa-book"></i>
-            <span>My Tutorials</span>
+        <a href="my-learning.php" class="nav-link">
+            <i class="fas fa-graduation-cap"></i>
+            <span>My Learning</span>
         </a>
-        
-        <a href="create-tutorial.php" class="nav-link">
-            <i class="fas fa-plus-circle"></i>
-            <span>Create</span>
-        </a>
-        
-        <div class="navbar-spacer"></div>
         
         <div class="nav-dropdown">
             <button class="nav-link dropdown-toggle">
@@ -38,17 +43,21 @@
                 <i class="fas fa-chevron-down"></i>
             </button>
             <div class="dropdown-menu">
+                <a href="dashboard.php" class="dropdown-item">
+                    <i class="fas fa-home"></i>
+                    Dashboard
+                </a>
                 <a href="profile.php" class="dropdown-item">
                     <i class="fas fa-user"></i>
                     My Profile
                 </a>
-                <a href="analytics.php" class="dropdown-item">
+                <a href="my-progress.php" class="dropdown-item">
                     <i class="fas fa-chart-line"></i>
-                    Analytics
+                    My Progress
                 </a>
-                <a href="settings.php" class="dropdown-item">
-                    <i class="fas fa-cog"></i>
-                    Settings
+                <a href="my-ratings.php" class="dropdown-item">
+                    <i class="fas fa-star"></i>
+                    My Ratings
                 </a>
                 <div class="dropdown-divider"></div>
                 <a href="../auth/logout.php" class="dropdown-item">

@@ -256,7 +256,7 @@ class User {
             return false;
         }
     }
-    
+
     /**
      * fetch user by email
      * @param string $email
