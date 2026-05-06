@@ -1,30 +1,71 @@
 <?php
 /**
- * Student Dashboard
- * main page for students to see their learning progress
+ * Student Dashboard - REAL DATA VERSION
  * Hasan Fardan - 202301686
  */
 
-require_once '../includes/viewer-auth-check.php';  // 
+require_once '../includes/viewer-auth-check.php';
 require_once '../classes/User.php';
+require_once '../classes/Tutorial.php';
 
 $page_title = 'My Learning Dashboard';
 
-// getting student stats
+// Get real student stats
 $user = new User();
-$user_stats = $user->getUserStats($current_user_id);  // 
+$user_stats = $user->getUserStats($current_user_id);
 
+// Get user's activity
+$database = new Database();
+$conn = $database->connect();
 
-// mock data until tutorial class is ready
-$enrolled_count = 0;
+// Count enrolled/viewed tutorials
+$enrolledQuery = "SELECT COUNT(DISTINCT tutorial_id) as count 
+                  FROM techknow_user_activity 
+                  WHERE user_id = :user_id";
+$enrolledStmt = $conn->prepare($enrolledQuery);
+$enrolledStmt->bindParam(':user_id', $current_user_id, PDO::PARAM_INT);
+$enrolledStmt->execute();
+$enrolled_count = $enrolledStmt->fetch()['count'];
+
+// Count completed tutorials
 $completed_count = $user_stats['completed_tutorials'] ?? 0;
-$in_progress_count = 0;
-$total_learning_time = 0;
 
-// recent activity
-$recent_tutorials = [];
-$recommended_tutorials = [];
-$continue_learning = [];
+// Count in progress
+$in_progress_count = $enrolled_count - $completed_count;
+
+// Calculate total learning time (estimated from completed tutorials)
+$timeQuery = "SELECT SUM(t.duration_minutes) as total_time
+              FROM techknow_user_activity ua
+              JOIN techknow_tutorials t ON ua.tutorial_id = t.tutorial_id
+              WHERE ua.user_id = :user_id AND ua.activity_type = 'complete'";
+$timeStmt = $conn->prepare($timeQuery);
+$timeStmt->bindParam(':user_id', $current_user_id, PDO::PARAM_INT);
+$timeStmt->execute();
+$total_learning_time = $timeStmt->fetch()['total_time'] ?? 0;
+
+// Get recent tutorials (continue learning)
+$continueQuery = "SELECT t.*, c.category_name, u.full_name as instructor_name,
+                  ua.activity_type,
+                  CASE 
+                    WHEN ua.activity_type = 'complete' THEN 100
+                    ELSE 50
+                  END as progress
+                  FROM techknow_user_activity ua
+                  JOIN techknow_tutorials t ON ua.tutorial_id = t.tutorial_id
+                  JOIN techknow_categories c ON t.category_id = c.category_id
+                  JOIN techknow_users u ON t.instructor_id = u.user_id
+                  WHERE ua.user_id = :user_id
+                  ORDER BY ua.activity_date DESC
+                  LIMIT 3";
+$continueStmt = $conn->prepare($continueQuery);
+$continueStmt->bindParam(':user_id', $current_user_id, PDO::PARAM_INT);
+$continueStmt->execute();
+$continue_learning = $continueStmt->fetchAll();
+
+// Get recommended tutorials (most popular)
+$tutorial = new Tutorial();
+$recommended_result = $tutorial->getPublished(1, 6);
+$recommended_tutorials = $recommended_result['tutorials'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -42,7 +83,6 @@ $continue_learning = [];
         <?php include '../includes/viewer-sidebar.php'; ?>
         
         <main class="viewer-main">
-            <!-- welcome header -->
             <div class="dashboard-header">
                 <div>
                     <h1>Welcome back, <?= e($current_user_name) ?>! 📚</h1>
@@ -56,7 +96,7 @@ $continue_learning = [];
             
             <?php displayFlashMessage(); ?>
             
-            <!-- learning stats cards -->
+            <!-- Real Statistics Cards -->
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
@@ -111,32 +151,38 @@ $continue_learning = [];
                 </div>
             </div>
             
-            <!-- continue learning section -->
+            <!-- Continue Learning Section -->
             <?php if (!empty($continue_learning)): ?>
             <section class="continue-section">
                 <h2><i class="fas fa-play-circle"></i> Continue Learning</h2>
                 <div class="continue-grid">
-                    <?php foreach ($continue_learning as $tutorial): ?>
+                    <?php foreach ($continue_learning as $tut): ?>
                     <div class="continue-card">
                         <div class="tutorial-thumbnail">
-                            <img src="<?= $tutorial['thumbnail'] ?>" alt="<?= e($tutorial['title']) ?>">
+                            <?php if (!empty($tut['thumbnail'])): ?>
+                                <img src="<?= SITE_URL ?>/uploads/<?= e($tut['thumbnail']) ?>" alt="<?= e($tut['title']) ?>">
+                            <?php else: ?>
+                                <div style="width:100%;height:150px;background:#e0e0e0;display:flex;align-items:center;justify-content:center;">
+                                    <i class="fas fa-book" style="font-size:48px;color:#999;"></i>
+                                </div>
+                            <?php endif; ?>
                             <div class="play-overlay">
                                 <i class="fas fa-play-circle"></i>
                             </div>
                         </div>
                         <div class="tutorial-info">
-                            <h3><?= e($tutorial['title']) ?></h3>
+                            <h3><?= e($tut['title']) ?></h3>
                             <p class="instructor">
                                 <i class="fas fa-user"></i> 
-                                <?= e($tutorial['instructor_name']) ?>
+                                <?= e($tut['instructor_name']) ?>
                             </p>
                             <div class="progress-wrapper">
                                 <div class="progress-bar">
-                                    <div class="progress-fill" style="width: <?= $tutorial['progress'] ?>%"></div>
+                                    <div class="progress-fill" style="width: <?= $tut['progress'] ?>%"></div>
                                 </div>
-                                <span class="progress-text"><?= $tutorial['progress'] ?>% complete</span>
+                                <span class="progress-text"><?= $tut['progress'] ?>% complete</span>
                             </div>
-                            <a href="tutorial-view.php?id=<?= $tutorial['tutorial_id'] ?>" class="btn btn-primary btn-small">
+                            <a href="../public/search.php?q=<?= urlencode($tut['title']) ?>" class="btn btn-primary btn-small">
                                 Continue <i class="fas fa-arrow-right"></i>
                             </a>
                         </div>
@@ -146,7 +192,7 @@ $continue_learning = [];
             </section>
             <?php endif; ?>
             
-            <!-- recommended tutorials -->
+            <!-- Recommended Tutorials (continues...) -->
             <section class="recommended-section">
                 <div class="section-header">
                     <h2><i class="fas fa-lightbulb"></i> Recommended for You</h2>
@@ -157,7 +203,7 @@ $continue_learning = [];
                 <div class="empty-state">
                     <i class="fas fa-graduation-cap"></i>
                     <h3>Start Your Learning Journey!</h3>
-                    <p>Explore our vast collection of tutorials to get personalized recommendations</p>
+                    <p>Explore our vast collection of tutorials</p>
                     <a href="browse-tutorials.php" class="btn btn-primary">
                         <i class="fas fa-search"></i>
                         Browse Tutorials
@@ -165,34 +211,40 @@ $continue_learning = [];
                 </div>
                 <?php else: ?>
                 <div class="tutorials-grid">
-                    <?php foreach ($recommended_tutorials as $tutorial): ?>
+                    <?php foreach ($recommended_tutorials as $tut): ?>
                     <div class="tutorial-card">
                         <div class="card-thumbnail">
-                            <img src="<?= $tutorial['thumbnail'] ?>" alt="<?= e($tutorial['title']) ?>">
-                            <span class="difficulty-badge difficulty-<?= $tutorial['difficulty'] ?>">
-                                <?= ucfirst($tutorial['difficulty']) ?>
+                            <?php if (!empty($tut['thumbnail'])): ?>
+                                <img src="<?= SITE_URL ?>/uploads/<?= e($tut['thumbnail']) ?>" alt="<?= e($tut['title']) ?>">
+                            <?php else: ?>
+                                <div style="width:100%;height:180px;background:#e0e0e0;display:flex;align-items:center;justify-content:center;">
+                                    <i class="fas fa-book" style="font-size:48px;color:#999;"></i>
+                                </div>
+                            <?php endif; ?>
+                            <span class="difficulty-badge difficulty-<?= $tut['difficulty'] ?>">
+                                <?= ucfirst($tut['difficulty']) ?>
                             </span>
                         </div>
                         <div class="card-body">
                             <span class="category-tag">
                                 <i class="fas fa-folder"></i>
-                                <?= e($tutorial['category_name']) ?>
+                                <?= e($tut['category_name']) ?>
                             </span>
-                            <h3><?= e($tutorial['title']) ?></h3>
-                            <p><?= truncate($tutorial['short_description'], 100) ?></p>
+                            <h3><?= e($tut['title']) ?></h3>
+                            <p><?= truncate($tut['short_description'], 100) ?></p>
                             
                             <div class="card-meta">
-                                <span><i class="fas fa-user"></i> <?= e($tutorial['instructor_name']) ?></span>
-                                <span><i class="fas fa-clock"></i> <?= $tutorial['duration_minutes'] ?> min</span>
+                                <span><i class="fas fa-user"></i> <?= e($tut['instructor_name']) ?></span>
+                                <span><i class="fas fa-clock"></i> <?= $tut['duration_minutes'] ?> min</span>
                             </div>
                             
                             <div class="card-footer">
                                 <div class="rating">
-                                    <i class="fas fa-star"></i>
-                                    <span><?= number_format($tutorial['avg_rating'], 1) ?></span>
-                                    <small>(<?= $tutorial['rating_count'] ?>)</small>
+                                    <i class="fas fa-star" style="color: #ffc107;"></i>
+                                    <span><?= number_format($tut['avg_rating'] ?? 0, 1) ?></span>
+                                    <small>(<?= $tut['rating_count'] ?>)</small>
                                 </div>
-                                <a href="tutorial-view.php?id=<?= $tutorial['tutorial_id'] ?>" class="btn btn-sm btn-primary">
+                                <a href="../public/search.php?q=<?= urlencode($tut['title']) ?>" class="btn btn-sm btn-primary">
                                     Start Learning
                                 </a>
                             </div>
@@ -202,18 +254,6 @@ $continue_learning = [];
                 </div>
                 <?php endif; ?>
             </section>
-            
-            <!-- learning activity -->
-            <section class="activity-section">
-                <h2><i class="fas fa-history"></i> Recent Activity</h2>
-                <div class="activity-timeline">
-                    <div class="empty-timeline">
-                        <i class="fas fa-clipboard-list"></i>
-                        <p>Your learning activity will appear here</p>
-                    </div>
-                </div>
-            </section>
-            
         </main>
     </div>
     

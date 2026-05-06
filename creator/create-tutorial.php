@@ -37,8 +37,13 @@ $form_data = [
 
 // handling the post request will do this once the tutorial class is done
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    if (!verifyCsrfFromPost()) {
+        $error = 'Invalid security token. Please try again.';
+    } else {
     // waiting for samana to finish her part before i code this
     $success = 'Tutorial creation will be implemented when Tutorial class is ready!';
+}
 }
 ?>
 <!DOCTYPE html>
@@ -90,7 +95,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <!-- main tutorial form starts here -->
             <form method="POST" action="" enctype="multipart/form-data" class="tutorial-form" id="createTutorialForm">
-                
+                    <?php csrfField(); ?>
+
                 <!-- basic info section -->
                 <div class="form-section">
                     <h2><i class="fas fa-info-circle"></i> Basic Information</h2>

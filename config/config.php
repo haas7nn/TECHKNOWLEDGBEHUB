@@ -36,6 +36,7 @@ define('SESSION_TIMEOUT', 3600);  // 1 hour in seconds
 define('PASSWORD_MIN_LENGTH', 8);
 define('MAX_LOGIN_ATTEMPTS', 5);
 
+
 // setting the time for bahrain
 date_default_timezone_set('Asia/Bahrain');
 
@@ -441,6 +442,25 @@ function generateCSRFToken() {
  */
 function verifyCSRFToken($token) {
     return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
+}
+
+/**
+ * Output CSRF token as hidden input
+ * @return void
+ */
+function csrfField() {
+    echo '<input type="hidden" name="csrf_token" value="' . generateCSRFToken() . '">';
+}
+
+/**
+ * Verify CSRF token from POST
+ * @return bool
+ */
+function verifyCsrfFromPost() {
+    if (!isset($_POST['csrf_token'])) {
+        return false;
+    }
+    return verifyCSRFToken($_POST['csrf_token']);
 }
 
 /**

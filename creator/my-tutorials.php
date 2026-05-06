@@ -1,16 +1,37 @@
 <?php
 /**
- * My Tutorials Page
- * list of all tutorials created by the instructor
+ * My Tutorials Page - REAL DATA VERSION
+ * Shows instructor's actual tutorials from database
  * Hasan Fardan - 202301686
  */
 
 require_once '../includes/auth-check.php';
+require_once '../classes/Tutorial.php';
 
 $page_title = 'My Tutorials';
 
-// mock data 
-$tutorials = [];
+// Get filter parameters
+$status_filter = isset($_GET['status']) ? clean($_GET['status']) : '';
+$sort = isset($_GET['sort']) ? clean($_GET['sort']) : 'newest';
+
+// Get instructor's tutorials
+$tutorial = new Tutorial();
+$my_tutorials = $tutorial->getByInstructor($current_user_id, $status_filter);
+
+// Sort tutorials
+usort($my_tutorials, function($a, $b) use ($sort) {
+    switch($sort) {
+        case 'oldest':
+            return strtotime($a['created_at']) - strtotime($b['created_at']);
+        case 'most_viewed':
+            return $b['view_count'] - $a['view_count'];
+        case 'highest_rated':
+            return ($b['avg_rating'] ?? 0) - ($a['avg_rating'] ?? 0);
+        case 'newest':
+        default:
+            return strtotime($b['created_at']) - strtotime($a['created_at']);
+    }
+});
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -28,11 +49,10 @@ $tutorials = [];
         <?php include '../includes/creator-sidebar.php'; ?>
         
         <main class="dashboard-main">
-            <!-- header -->
             <div class="dashboard-header">
                 <div>
                     <h1><i class="fas fa-book"></i> My Tutorials</h1>
-                    <p>Manage all your tutorials in one place</p>
+                    <p>Manage all your tutorials in one place (<?= count($my_tutorials) ?> total)</p>
                 </div>
                 <a href="create-tutorial.php" class="btn btn-primary">
                     <i class="fas fa-plus"></i>
@@ -40,43 +60,37 @@ $tutorials = [];
                 </a>
             </div>
             
-            <!-- flash messages -->
             <?php displayFlashMessage(); ?>
             
-            <!-- filters -->
+            <!-- Filters Bar -->
             <div class="filters-bar">
                 <div class="filter-group">
                     <label>Status:</label>
-                    <select class="filter-select">
+                    <select class="filter-select" onchange="filterByStatus(this.value)">
                         <option value="">All Status</option>
-                        <option value="published">Published</option>
-                        <option value="draft">Draft</option>
-                        <option value="archived">Archived</option>
+                        <option value="published" <?= $status_filter === 'published' ? 'selected' : '' ?>>Published</option>
+                        <option value="draft" <?= $status_filter === 'draft' ? 'selected' : '' ?>>Draft</option>
+                        <option value="archived" <?= $status_filter === 'archived' ? 'selected' : '' ?>>Archived</option>
                     </select>
                 </div>
                 
                 <div class="filter-group">
                     <label>Sort by:</label>
-                    <select class="filter-select">
-                        <option value="newest">Newest First</option>
-                        <option value="oldest">Oldest First</option>
-                        <option value="most_viewed">Most Viewed</option>
-                        <option value="highest_rated">Highest Rated</option>
+                    <select class="filter-select" onchange="sortTutorials(this.value)">
+                        <option value="newest" <?= $sort === 'newest' ? 'selected' : '' ?>>Newest First</option>
+                        <option value="oldest" <?= $sort === 'oldest' ? 'selected' : '' ?>>Oldest First</option>
+                        <option value="most_viewed" <?= $sort === 'most_viewed' ? 'selected' : '' ?>>Most Viewed</option>
+                        <option value="highest_rated" <?= $sort === 'highest_rated' ? 'selected' : '' ?>>Highest Rated</option>
                     </select>
-                </div>
-                
-                <div class="search-box">
-                    <i class="fas fa-search"></i>
-                    <input type="text" placeholder="Search your tutorials...">
                 </div>
             </div>
             
-            <!-- tutorials list -->
-            <?php if (empty($tutorials)): ?>
+            <!-- Tutorials Grid -->
+            <?php if (empty($my_tutorials)): ?>
                 <div class="empty-state-large">
                     <i class="fas fa-book-open"></i>
                     <h2>No tutorials yet</h2>
-                    <p>Start sharing your knowledge by creating your first tutorial  !</p>
+                    <p>Start sharing your knowledge by creating your first tutorial!</p>
                     <a href="create-tutorial.php" class="btn btn-primary btn-large">
                         <i class="fas fa-plus-circle"></i>
                         Create Your First Tutorial
@@ -84,37 +98,57 @@ $tutorials = [];
                 </div>
             <?php else: ?>
                 <div class="tutorials-grid">
-                    <?php foreach ($tutorials as $tutorial): ?>
+                    <?php foreach ($my_tutorials as $tut): ?>
                         <div class="tutorial-card-large">
                             <div class="tutorial-thumbnail">
-                                <img src="<?= $tutorial['thumbnail'] ?>" alt="<?= e($tutorial['title']) ?>">
-                                <span class="tutorial-status status-<?= $tutorial['status'] ?>">
-                                    <?= ucfirst($tutorial['status']) ?>
+                                <?php if (!empty($tut['thumbnail'])): ?>
+                                    <img src="<?= SITE_URL ?>/uploads/<?= e($tut['thumbnail']) ?>" alt="<?= e($tut['title']) ?>">
+                                <?php else: ?>
+                                    <div style="width:100%;height:200px;background:#e0e0e0;display:flex;align-items:center;justify-content:center;">
+                                        <i class="fas fa-book" style="font-size:48px;color:#999;"></i>
+                                    </div>
+                                <?php endif; ?>
+                                <span class="tutorial-status status-<?= $tut['status'] ?>">
+                                    <?= ucfirst($tut['status']) ?>
                                 </span>
                             </div>
                             
                             <div class="tutorial-card-body">
-                                <h3><?= e($tutorial['title']) ?></h3>
-                                <p><?= truncate($tutorial['short_description'], 120) ?></p>
+                                <span class="category-tag">
+                                    <i class="fas fa-folder"></i>
+                                    <?= e($tut['category_name']) ?>
+                                </span>
+                                <h3><?= e($tut['title']) ?></h3>
+                                <p><?= truncate($tut['short_description'], 120) ?></p>
                                 
                                 <div class="tutorial-meta">
-                                    <span><i class="fas fa-eye"></i> <?= number_format($tutorial['view_count']) ?> views</span>
-                                    <span><i class="fas fa-star"></i> <?= number_format($tutorial['avg_rating'], 1) ?></span>
-                                    <span><i class="fas fa-comments"></i> <?= $tutorial['comment_count'] ?></span>
+                                    <span>
+                                        <i class="fas fa-eye"></i>
+                                        <?= number_format($tut['view_count']) ?> views
+                                    </span>
+                                    <span>
+                                        <i class="fas fa-star" style="color: #ffc107;"></i>
+                                        <?= number_format($tut['avg_rating'] ?? 0, 1) ?>
+                                        (<?= $tut['rating_count'] ?>)
+                                    </span>
+                                    <span>
+                                        <i class="fas fa-comments"></i>
+                                        <?= $tut['comment_count'] ?>
+                                    </span>
                                 </div>
                                 
                                 <div class="tutorial-footer">
                                     <small class="text-muted">
-                                        Created <?= timeAgo($tutorial['created_at']) ?>
+                                        Created <?= timeAgo($tut['created_at']) ?>
                                     </small>
                                     <div class="card-actions">
-                                        <a href="edit-tutorial.php?id=<?= $tutorial['tutorial_id'] ?>" class="btn btn-icon" title="Edit">
+                                        <a href="edit-tutorial.php?id=<?= $tut['tutorial_id'] ?>" class="btn btn-icon" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <a href="../public/tutorial-detail.php?slug=<?= $tutorial['slug'] ?>" class="btn btn-icon" title="View" target="_blank">
+                                        <a href="../public/search.php?q=<?= urlencode($tut['title']) ?>" class="btn btn-icon" title="View" target="_blank">
                                             <i class="fas fa-external-link-alt"></i>
                                         </a>
-                                        <button class="btn btn-icon btn-danger" title="Delete" onclick="deleteTutorial(<?= $tutorial['tutorial_id'] ?>)">
+                                        <button class="btn btn-icon btn-danger" title="Delete" onclick="deleteTutorial(<?= $tut['tutorial_id'] ?>, '<?= e($tut['title']) ?>')">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
@@ -128,10 +162,26 @@ $tutorials = [];
     </div>
     
     <script>
-        function deleteTutorial(id) {
-            if (confirm('Are you sure you want to delete this tutorial? This action cannot be undone')) {
-                // will be added 
-                alert('Delete functionality will be implemented with Tutorial class');
+        function filterByStatus(status) {
+            const currentUrl = new URL(window.location.href);
+            if (status) {
+                currentUrl.searchParams.set('status', status);
+            } else {
+                currentUrl.searchParams.delete('status');
+            }
+            window.location.href = currentUrl.toString();
+        }
+        
+        function sortTutorials(sort) {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('sort', sort);
+            window.location.href = currentUrl.toString();
+        }
+        
+        function deleteTutorial(id, title) {
+            if (confirm('Are you sure you want to delete "' + title + '"?\n\nThis will archive the tutorial (soft delete).')) {
+                // In a real implementation, you'd use AJAX here
+                window.location.href = 'delete-tutorial.php?id=' + id;
             }
         }
     </script>

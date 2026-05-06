@@ -6,14 +6,42 @@
  */
 
 require_once '../includes/viewer-auth-check.php';
+require_once '../classes/Tutorial.php';
 
 $page_title = 'My Learning';
 
-// filter tabs
 $active_tab = isset($_GET['tab']) ? clean($_GET['tab']) : 'all';
 
-// mock data
-$my_tutorials = [];
+// Get real enrollment data from database
+$database = new Database();
+$conn = $database->connect();
+
+$query = "SELECT DISTINCT t.*, c.category_name, u.full_name as instructor_name,
+          ua.activity_type,
+          COALESCE(ua.progress_percentage, 0) as progress,
+          COALESCE(AVG(r.rating), 0) as avg_rating,
+          COUNT(DISTINCT r2.rating_id) as rating_count
+          FROM techknow_user_activity ua
+          JOIN techknow_tutorials t ON ua.tutorial_id = t.tutorial_id
+          JOIN techknow_categories c ON t.category_id = c.category_id
+          JOIN techknow_users u ON t.instructor_id = u.user_id
+          LEFT JOIN techknow_ratings r ON t.tutorial_id = r.tutorial_id
+          LEFT JOIN techknow_ratings r2 ON t.tutorial_id = r2.tutorial_id
+          WHERE ua.user_id = :user_id";
+
+// Apply tab filter
+if ($active_tab === 'completed') {
+    $query .= " AND ua.activity_type = 'complete'";
+} elseif ($active_tab === 'in-progress') {
+    $query .= " AND ua.activity_type = 'view' AND ua.progress_percentage < 100";
+}
+
+$query .= " GROUP BY t.tutorial_id ORDER BY ua.activity_date DESC";
+
+$stmt = $conn->prepare($query);
+$stmt->bindParam(':user_id', $current_user_id, PDO::PARAM_INT);
+$stmt->execute();
+$my_tutorials = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">

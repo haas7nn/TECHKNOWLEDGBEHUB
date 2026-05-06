@@ -6,52 +6,67 @@
  */
 
 require_once '../includes/viewer-auth-check.php';
+require_once '../classes/Tutorial.php';
 
 $page_title = 'View Tutorial';
 
-// getting tutorial id
-$tutorial_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+// Get slug from URL
+$slug = isset($_GET['slug']) ? clean($_GET['slug']) : '';
 
-if (!$tutorial_id) {
-    setFlashMessage('Invalid tutorial ID', 'error');
+if (empty($slug)) {
+    setFlashMessage('Invalid tutorial', 'error');
     redirect('viewer/browse-tutorials.php');
 }
 
-// mock tutorial data
-$tutorial = [
-    'tutorial_id' => $tutorial_id,
-    'title' => 'Sample Tutorial',
-    'short_description' => 'This is a sample tutorial description',
-    'content' => '<p>Tutorial content will appear here...</p>',
-    'category_name' => 'Programming',
-    'difficulty' => 'beginner',
-    'duration_minutes' => 45,
-    'instructor_name' => 'John Doe',
-    'instructor_avatar' => asset('images/default-avatar.png'),
-    'avg_rating' => 4.5,
-    'rating_count' => 120,
-    'view_count' => 1500,
-    'created_at' => date('Y-m-d H:i:s'),
-    'video_url' => '',
-    'is_favorited' => false
-];
+// Get tutorial from database
+$tutorialObj = new Tutorial();
+$tutorial = $tutorialObj->getBySlug($slug);
 
-// comments data
-$comments = [];
+if (!$tutorial) {
+    setFlashMessage('Tutorial not found', 'error');
+    redirect('viewer/browse-tutorials.php');
+}
 
-// handling comment submission
+// Log view
+$tutorialObj->logView($tutorial['tutorial_id'], $current_user_id);
+
+// Handle comment submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment'])) {
-    $comment_text = clean($_POST['comment']);
-    // will save to database when comment class is ready
-    setFlashMessage('Comment feature will be implemented soon!', 'info');
+    if (!verifyCsrfFromPost()) {
+        $error = 'Invalid security token';
+    } else {
+        $comment_text = clean($_POST['comment']);
+        // Save comment to database
+        $database = new Database();
+        $conn = $database->connect();
+        
+        $commentQuery = "INSERT INTO techknow_comments (tutorial_id, user_id, comment_text, created_at) 
+                        VALUES (:tutorial_id, :user_id, :comment_text, NOW())";
+        $commentStmt = $conn->prepare($commentQuery);
+        $commentStmt->bindParam(':tutorial_id', $tutorial['tutorial_id'], PDO::PARAM_INT);
+        $commentStmt->bindParam(':user_id', $current_user_id, PDO::PARAM_INT);
+        $commentStmt->bindParam(':comment_text', $comment_text, PDO::PARAM_STR);
+        
+        if ($commentStmt->execute()) {
+            setFlashMessage('Comment posted successfully!', 'success');
+            redirect('viewer/tutorial-view.php?slug=' . $slug);
+        }
+    }
 }
 
-// handling rating submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rating'])) {
-    $rating = (int)$_POST['rating'];
-    // will save to database when rating class is ready
-    setFlashMessage('Rating feature will be implemented soon!', 'info');
-}
+// Get comments
+$database = new Database();
+$conn = $database->connect();
+
+$commentsQuery = "SELECT c.*, u.full_name as user_name 
+                  FROM techknow_comments c 
+                  JOIN techknow_users u ON c.user_id = u.user_id 
+                  WHERE c.tutorial_id = :tutorial_id 
+                  ORDER BY c.created_at DESC";
+$commentsStmt = $conn->prepare($commentsQuery);
+$commentsStmt->bindParam(':tutorial_id', $tutorial['tutorial_id'], PDO::PARAM_INT);
+$commentsStmt->execute();
+$comments = $commentsStmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">

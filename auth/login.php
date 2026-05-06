@@ -25,10 +25,15 @@ $email_value = '';
 
 // handling the form when they hit submit
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    
+if (!verifyCsrfFromPost()) {
+        $error = 'Invalid security token. Please refresh the page and try again.';
+    } else {
+
+
     $email = clean($_POST['email']);
     $password = $_POST['password'];
     $remember = isset($_POST['remember']);
-    
     $email_value = $email;
     
     // making sure they actually typed something in
@@ -45,6 +50,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // save their email for next time if they checked the box
             if ($remember) {
                 setcookie('remember_user', $email, time() + (86400 * 30), '/'); // lasts for 30 days
+            }
+
+        if ($remember) {
+             setcookie('remember_user', $email, [
+            'expires' => time() + (86400 * 30),
+            'path' => '/',
+            'secure' => true,  // HTTPS only
+            'httponly' => true,  // No JavaScript access
+            'samesite' => 'Strict'  // CSRF protection
+             ]);
             }
             
             // if they were trying to visit a specific page before logging in send them back there
@@ -67,7 +82,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = $result['message'];
         }
     }
+    }
 }
+
+
 
 // pull the saved email from the cookie so they dont have to retype it
 if (isset($_COOKIE['remember_user']) && empty($email_value)) {
@@ -117,7 +135,9 @@ if (isset($_COOKIE['remember_user']) && empty($email_value)) {
                 
                 <!-- main login form starts here -->
                 <form method="POST" action="" id="loginForm" class="auth-form" novalidate>
-                    
+
+                    <?php csrfField(); ?>
+
                     <!-- email field -->
                     <div class="form-group">
                         <label for="email">
@@ -246,9 +266,6 @@ if (isset($_COOKIE['remember_user']) && empty($email_value)) {
             
             let hasError = false;
             
-            // wipe out any old error messages
-            document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
-            
             // make sure email isn't empty or weirdly formatted
             if (!email) {
                 document.getElementById('email-error').textContent = 'Email is required';
@@ -268,7 +285,10 @@ if (isset($_COOKIE['remember_user']) && empty($email_value)) {
             if (hasError) {
                 e.preventDefault();
             }
+
+            
         });
+        
     </script>
 </body>
 </html>

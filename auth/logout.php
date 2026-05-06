@@ -21,4 +21,6 @@ $_SESSION['flash_type'] = 'success';
 // back to the home page we go
 header("Location: ../public/index.php");
 exit();
+
+
 ?>

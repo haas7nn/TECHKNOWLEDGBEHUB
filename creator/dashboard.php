@@ -1,28 +1,40 @@
 <?php
 /**
- * main dashboard for creators
- * shows how tutorials are doing and stats
+ * Creator Dashboard - REAL DATA VERSION
+ * Shows actual statistics from database
  * Hasan Fardan - 202301686
  */
 
-require_once '../includes/auth-check.php';  // 
+require_once '../includes/auth-check.php';
 require_once '../classes/User.php';
+require_once '../classes/Tutorial.php';
 
-// just basic structure for now
 $page_title = 'Creator Dashboard';
 
-// getting user stats will do this right once the tutorial class is finished
+// Get real user stats
 $user = new User();
-$user_stats = $user->getUserStats($current_user_id);  // 
+$user_stats = $user->getUserStats($current_user_id);
 
-// using fake data until the tutorial class is ready to query the database
-$total_tutorials = $user_stats['total_tutorials'] ?? 0;
-$total_views = 0; // total views needs to be calculated from tutorials later
-$total_ratings = $user_stats['total_ratings'] ?? 0;
-$avg_rating = 0; // avg rating will come from tutorials later
+// Get instructor's tutorials
+$tutorial = new Tutorial();
+$my_tutorials = $tutorial->getByInstructor($current_user_id);
 
-// empty list for now until i pull from db
-$recent_tutorials = [];
+// Calculate statistics from actual data
+$total_tutorials = count($my_tutorials);
+$total_views = 0;
+$total_ratings_count = 0;
+$total_rating_sum = 0;
+
+foreach ($my_tutorials as $tut) {
+    $total_views += $tut['view_count'];
+    $total_ratings_count += $tut['rating_count'];
+    $total_rating_sum += ($tut['avg_rating'] * $tut['rating_count']);
+}
+
+$avg_rating = $total_ratings_count > 0 ? $total_rating_sum / $total_ratings_count : 0;
+
+// Get recent 5 tutorials for display
+$recent_tutorials = array_slice($my_tutorials, 0, 5);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -34,16 +46,12 @@ $recent_tutorials = [];
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <!-- top nav -->
     <?php include '../includes/creator-nav.php'; ?>
     
     <div class="dashboard-container">
-        <!-- sidebar menu -->
         <?php include '../includes/creator-sidebar.php'; ?>
         
-        <!-- the main stuff goes here -->
         <main class="dashboard-main">
-            <!-- page header -->
             <div class="dashboard-header">
                 <div>
                     <h1>Welcome back, <?= e($current_user_name) ?>! 👋</h1>
@@ -55,12 +63,10 @@ $recent_tutorials = [];
                 </a>
             </div>
             
-            <!-- messages and alerts -->
             <?php displayFlashMessage(); ?>
             
-            <!-- the 4 cards at the top -->
+            <!-- Real Statistics Cards -->
             <div class="stats-grid">
-                <!-- how many tutorials total -->
                 <div class="stat-card">
                     <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                         <i class="fas fa-book"></i>
@@ -68,13 +74,13 @@ $recent_tutorials = [];
                     <div class="stat-details">
                         <h3><?= $total_tutorials ?></h3>
                         <p>Total Tutorials</p>
-                        <span class="stat-change positive">
-                            <i class="fas fa-arrow-up"></i> Active
+                        <span class="stat-change <?= $total_tutorials > 0 ? 'positive' : '' ?>">
+                            <i class="fas fa-<?= $total_tutorials > 0 ? 'check-circle' : 'info-circle' ?>"></i>
+                            <?= $total_tutorials > 0 ? 'Active' : 'Get Started' ?>
                         </span>
                     </div>
                 </div>
                 
-                <!-- view counter -->
                 <div class="stat-card">
                     <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
                         <i class="fas fa-eye"></i>
@@ -82,13 +88,13 @@ $recent_tutorials = [];
                     <div class="stat-details">
                         <h3><?= number_format($total_views) ?></h3>
                         <p>Total Views</p>
-                        <span class="stat-change positive">
-                            <i class="fas fa-arrow-up"></i> Growing
+                        <span class="stat-change <?= $total_views > 0 ? 'positive' : '' ?>">
+                            <i class="fas fa-arrow-<?= $total_views > 0 ? 'up' : 'minus' ?>"></i>
+                            <?= $total_views > 0 ? 'Growing' : 'No views yet' ?>
                         </span>
                     </div>
                 </div>
                 
-                <!-- rating average -->
                 <div class="stat-card">
                     <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
                         <i class="fas fa-star"></i>
@@ -104,22 +110,22 @@ $recent_tutorials = [];
                     </div>
                 </div>
                 
-                <!-- how many people rated -->
                 <div class="stat-card">
                     <div class="stat-icon" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
                         <i class="fas fa-users"></i>
                     </div>
                     <div class="stat-details">
-                        <h3><?= $total_ratings ?></h3>
+                        <h3><?= $total_ratings_count ?></h3>
                         <p>Total Ratings</p>
                         <span class="stat-change">
-                            <i class="fas fa-heart"></i> Engaged
+                            <i class="fas fa-heart"></i>
+                            <?= $total_ratings_count > 0 ? 'Engaged' : 'No ratings' ?>
                         </span>
                     </div>
                 </div>
             </div>
             
-            <!-- shortcut links -->
+            <!-- Quick Actions -->
             <div class="quick-actions">
                 <h2>Quick Actions</h2>
                 <div class="action-cards">
@@ -135,21 +141,21 @@ $recent_tutorials = [];
                         <p>Manage your existing tutorials</p>
                     </a>
                     
-                    <a href="analytics.php" class="action-card">
-                        <i class="fas fa-chart-line"></i>
-                        <h3>View Analytics</h3>
-                        <p>Track your performance</p>
+                    <a href="../public/search.php" class="action-card" target="_blank">
+                        <i class="fas fa-search"></i>
+                        <h3>Browse All</h3>
+                        <p>See all platform tutorials</p>
                     </a>
                     
-                    <a href="profile.php" class="action-card">
-                        <i class="fas fa-user-edit"></i>
-                        <h3>Edit Profile</h3>
-                        <p>Update your information</p>
+                    <a href="../auth/logout.php" class="action-card">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <h3>Logout</h3>
+                        <p>End your session</p>
                     </a>
                 </div>
             </div>
             
-            <!-- list of latest tutorials -->
+            <!-- Recent Tutorials Table -->
             <div class="recent-section">
                 <div class="section-header">
                     <h2>Recent Tutorials</h2>
@@ -180,28 +186,32 @@ $recent_tutorials = [];
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($recent_tutorials as $tutorial): ?>
+                                <?php foreach ($recent_tutorials as $tut): ?>
                                     <tr>
                                         <td>
                                             <div class="tutorial-title">
                                                 <i class="fas fa-book"></i>
-                                                <?= e($tutorial['title']) ?>
+                                                <?= e($tut['title']) ?>
                                             </div>
                                         </td>
                                         <td>
-                                            <span class="status-badge status-<?= $tutorial['status'] ?>">
-                                                <?= ucfirst($tutorial['status']) ?>
+                                            <span class="status-badge status-<?= $tut['status'] ?>">
+                                                <?= ucfirst($tut['status']) ?>
                                             </span>
                                         </td>
-                                        <td><?= number_format($tutorial['view_count']) ?></td>
-                                        <td>⭐ <?= number_format($tutorial['avg_rating'], 1) ?></td>
-                                        <td><?= formatDate($tutorial['created_at']) ?></td>
+                                        <td><?= number_format($tut['view_count']) ?></td>
+                                        <td>
+                                            <span style="color: #ffc107;">⭐</span>
+                                            <?= number_format($tut['avg_rating'] ?? 0, 1) ?>
+                                            <small>(<?= $tut['rating_count'] ?>)</small>
+                                        </td>
+                                        <td><?= formatDate($tut['created_at']) ?></td>
                                         <td>
                                             <div class="action-buttons">
-                                                <a href="edit-tutorial.php?id=<?= $tutorial['tutorial_id'] ?>" class="btn-icon" title="Edit">
+                                                <a href="edit-tutorial.php?id=<?= $tut['tutorial_id'] ?>" class="btn-icon" title="Edit">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
-                                                <a href="view-tutorial.php?id=<?= $tutorial['tutorial_id'] ?>" class="btn-icon" title="View">
+                                                <a href="../public/search.php?q=<?= urlencode($tut['title']) ?>" class="btn-icon" title="View" target="_blank">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
                                             </div>
@@ -214,13 +224,17 @@ $recent_tutorials = [];
                 <?php endif; ?>
             </div>
             
-            <!-- chart section for later -->
+            <!-- Performance Chart Placeholder -->
             <div class="chart-section">
-                <h2>Performance Overview</h2>
+                <h2><i class="fas fa-chart-line"></i> Performance Overview</h2>
                 <div class="chart-placeholder">
-                    <i class="fas fa-chart-area"></i>
-                    <p>Tutorial views and engagement chart will appear here</p>
-                    <small>Feature coming soon with analytics integration</small>
+                    <div style="text-align: center; padding: 40px; color: #999;">
+                        <i class="fas fa-chart-area" style="font-size: 60px; margin-bottom: 20px;"></i>
+                        <p><strong>Total Views Trend:</strong> <?= number_format($total_views) ?></p>
+                        <p><strong>Avg Rating:</strong> <?= number_format($avg_rating, 2) ?>/5.0</p>
+                        <p><strong>Total Engagement:</strong> <?= $total_ratings_count ?> ratings</p>
+                        <small>Advanced analytics coming soon</small>
+                    </div>
                 </div>
             </div>
         </main>

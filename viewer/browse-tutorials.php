@@ -6,26 +6,39 @@
  */
 
 require_once '../includes/viewer-auth-check.php';
+require_once '../includes/viewer-auth-check.php';
+require_once '../classes/Tutorial.php';
+require_once '../classes/Category.php';
 
 $page_title = 'Browse Tutorials';
 
-// getting filters from url
+// Get filters
 $search = isset($_GET['search']) ? clean($_GET['search']) : '';
 $category = isset($_GET['category']) ? (int)$_GET['category'] : 0;
 $difficulty = isset($_GET['difficulty']) ? clean($_GET['difficulty']) : '';
 $sort = isset($_GET['sort']) ? clean($_GET['sort']) : 'newest';
+$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 
-// getting categories for filter
-$database = new Database();
-$conn = $database->connect();
+// Get categories for filter
+$categoryObj = new Category();
+$categories = $categoryObj->getAll();
 
-$categoriesQuery = "SELECT category_id, category_name FROM techknow_categories ORDER BY category_name";
-$categoriesStmt = $conn->query($categoriesQuery);
-$categories = $categoriesStmt->fetchAll();
+// Build filters array
+$filters = [];
+if (!empty($search)) $filters['search'] = $search;
+if (!empty($category)) $filters['category_id'] = $category;
+if (!empty($difficulty)) $filters['difficulty'] = $difficulty;
+if (!empty($sort)) $filters['sort'] = $sort;
 
-// mock tutorials data
-$tutorials = [];
-$total_results = 0;
+// Get tutorials from database
+$tutorial = new Tutorial();
+$result = empty($filters) && $sort === 'newest' 
+    ? $tutorial->getPublished($page, 12) 
+    : $tutorial->search($filters, $page, 12);
+
+$tutorials = $result['tutorials'];
+$pagination = $result['pagination'];
+$total_results = $pagination['total_items'];
 ?>
 <!DOCTYPE html>
 <html lang="en">

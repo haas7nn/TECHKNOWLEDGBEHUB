@@ -30,6 +30,9 @@ $form_data = [
 
 // handle the logic when they hit create account
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+     if (!verifyCsrfFromPost()) {
+        $error = 'Invalid security token. Please try again.';
+    } else {
     // clean the inputs so we stay safe
     $full_name = clean($_POST['full_name']);
     $email = clean($_POST['email']);
@@ -73,6 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $error = $result['message'];
         }
+    }
     }
 }
 ?>
@@ -119,6 +123,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 <!-- actual registration form starts here -->
                 <form method="POST" action="" id="registerForm" class="auth-form" novalidate>
+                        <?php csrfField(); ?>
+
                     
                     <!-- name input -->
                     <div class="form-group">
