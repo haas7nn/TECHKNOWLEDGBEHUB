@@ -189,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                         <span class="error-message" id="password-error"></span>
                         <small class="form-hint">
-                            OOPS , Must be at least 8 characters with uppercase, lowercase, and number
+                            Must be at least 8 characters with uppercase, lowercase, and number
                         </small>
                     </div>
                     

@@ -6,7 +6,7 @@
 
 require_once __DIR__ . '/../config/config.php';
 
-// not logged in — save where they were trying to go, then send to login
+// not logged in , save where they were trying to go, then send to login
 if (!isLoggedIn()) {
     $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
     setFlashMessage('Please login to access this page', 'warning');

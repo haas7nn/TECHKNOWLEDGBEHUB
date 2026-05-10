@@ -1,6 +1,6 @@
 <?php
 /**
- * Viewer Sidebar — only links to pages that actually exist
+ * Viewer Sidebar , only links to pages that actually exist
  * Hasan Fardan - 202301686
  */
 $current_page = basename($_SERVER['PHP_SELF']);

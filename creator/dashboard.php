@@ -1,6 +1,6 @@
 <?php
 /**
- * Creator Dashboard - REAL DATA VERSION
+ * Creator Dashboard
  * Shows actual statistics from database
  * Hasan Fardan - 202301686
  */

@@ -1,7 +1,6 @@
 <?php
 /**
- * Edit Tutorial Page - FULL WORKING VERSION
- * Edit existing tutorials with real database updates
+ * Edit Tutorial Page 
  * Hasan Fardan - 202301686
  */
 

@@ -1,6 +1,6 @@
 <?php
 /**
- * My Tutorials Page - REAL DATA VERSION
+ * My Tutorials Page
  * Shows instructor's actual tutorials from database
  * Hasan Fardan - 202301686
  */
