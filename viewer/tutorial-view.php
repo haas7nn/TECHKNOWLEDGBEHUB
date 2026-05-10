@@ -7,13 +7,10 @@
 require_once '../includes/viewer-auth-check.php';
 require_once '../classes/Tutorial.php';
 
-$page_title = 'View Tutorial';
-
-// Bug 8 fix: this page is linked with ?slug=, read slug not id
 $slug = isset($_GET['slug']) ? clean($_GET['slug']) : '';
 
 if (empty($slug)) {
-    setFlashMessage('Invalid tutorial', 'error');
+    setFlashMessage('Invalid tutorial link.', 'error');
     redirect('viewer/browse-tutorials.php');
 }
 
@@ -21,20 +18,19 @@ $tutorialObj = new Tutorial();
 $tutorial    = $tutorialObj->getBySlug($slug);
 
 if (!$tutorial) {
-    setFlashMessage('Tutorial not found', 'error');
+    setFlashMessage('Tutorial not found.', 'error');
     redirect('viewer/browse-tutorials.php');
 }
 
-// Bug 2 fix is in Tutorial.php logView() — no double count here
+// log the view (no double count — fixed in Tutorial.php)
 $tutorialObj->logView($tutorial['tutorial_id'], $current_user_id);
 
 $database = new Database();
 $conn     = $database->connect();
 
-// Handle comment submission
+// ---- handle comment POST ----
 $comment_error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment'])) {
-    // Bug 3 fix: CSRF is now verified (form now includes csrfField())
     if (!verifyCsrfFromPost()) {
         $comment_error = 'Invalid security token. Please try again.';
     } else {
@@ -42,15 +38,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment'])) {
         if (empty($comment_text)) {
             $comment_error = 'Comment cannot be empty.';
         } else {
-            $commentQuery = "INSERT INTO dbProj_comments (tutorial_id, user_id, comment_text, created_at)
-                            VALUES (:tutorial_id, :user_id, :comment_text, NOW())";
-            $commentStmt  = $conn->prepare($commentQuery);
-            $commentStmt->bindParam(':tutorial_id',  $tutorial['tutorial_id'], PDO::PARAM_INT);
-            $commentStmt->bindParam(':user_id',      $current_user_id,         PDO::PARAM_INT);
-            $commentStmt->bindParam(':comment_text', $comment_text,            PDO::PARAM_STR);
-
-            if ($commentStmt->execute()) {
-                setFlashMessage('Comment posted successfully!', 'success');
+            $stmt = $conn->prepare(
+                "INSERT INTO dbProj_comments (tutorial_id, user_id, comment_text, status, created_at)
+                 VALUES (:tid, :uid, :txt, 'approved', NOW())"
+            );
+            $stmt->bindParam(':tid', $tutorial['tutorial_id'], PDO::PARAM_INT);
+            $stmt->bindParam(':uid', $current_user_id,         PDO::PARAM_INT);
+            $stmt->bindParam(':txt', $comment_text,            PDO::PARAM_STR);
+            if ($stmt->execute()) {
+                setFlashMessage('Comment posted!', 'success');
                 redirect('viewer/tutorial-view.php?slug=' . urlencode($slug));
             } else {
                 $comment_error = 'Failed to post comment. Please try again.';
@@ -59,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment'])) {
     }
 }
 
-// Handle rating submission
+// ---- handle rating POST ----
 $rating_error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rating'])) {
     if (!verifyCsrfFromPost()) {
@@ -67,18 +63,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rating'])) {
     } else {
         $rating_val = (int)$_POST['rating'];
         if ($rating_val < 1 || $rating_val > 5) {
-            $rating_error = 'Invalid rating value.';
+            $rating_error = 'Please select a rating between 1 and 5.';
         } else {
-            $ratingQuery = "INSERT INTO dbProj_ratings (tutorial_id, user_id, rating, rated_at)
-                            VALUES (:tutorial_id, :user_id, :rating, NOW())
-                            ON DUPLICATE KEY UPDATE rating = :rating2, rated_at = NOW()";
-            $ratingStmt  = $conn->prepare($ratingQuery);
-            $ratingStmt->bindParam(':tutorial_id', $tutorial['tutorial_id'], PDO::PARAM_INT);
-            $ratingStmt->bindParam(':user_id',     $current_user_id,         PDO::PARAM_INT);
-            $ratingStmt->bindValue(':rating',      $rating_val,              PDO::PARAM_INT);
-            $ratingStmt->bindValue(':rating2',     $rating_val,              PDO::PARAM_INT);
-
-            if ($ratingStmt->execute()) {
+            $stmt = $conn->prepare(
+                "INSERT INTO dbProj_ratings (tutorial_id, user_id, rating, rated_at)
+                 VALUES (:tid, :uid, :r, NOW())
+                 ON DUPLICATE KEY UPDATE rating = :r2, rated_at = NOW()"
+            );
+            $stmt->bindParam(':tid', $tutorial['tutorial_id'], PDO::PARAM_INT);
+            $stmt->bindParam(':uid', $current_user_id,         PDO::PARAM_INT);
+            $stmt->bindValue(':r',   $rating_val,              PDO::PARAM_INT);
+            $stmt->bindValue(':r2',  $rating_val,              PDO::PARAM_INT);
+            if ($stmt->execute()) {
                 setFlashMessage('Rating submitted! Thank you.', 'success');
                 redirect('viewer/tutorial-view.php?slug=' . urlencode($slug));
             } else {
@@ -88,29 +84,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rating'])) {
     }
 }
 
-// Get comments
-$commentsQuery = "SELECT c.*, u.full_name as user_name
-                  FROM dbProj_comments c
-                  JOIN dbProj_users u ON c.user_id = u.user_id
-                  WHERE c.tutorial_id = :tutorial_id AND c.status = 'approved'
-                  ORDER BY c.created_at DESC";
-$commentsStmt  = $conn->prepare($commentsQuery);
-$commentsStmt->bindParam(':tutorial_id', $tutorial['tutorial_id'], PDO::PARAM_INT);
+// ---- fetch comments ----
+$commentsStmt = $conn->prepare(
+    "SELECT c.*, u.full_name AS user_name
+     FROM dbProj_comments c
+     JOIN dbProj_users u ON c.user_id = u.user_id
+     WHERE c.tutorial_id = :tid AND c.status = 'approved'
+     ORDER BY c.created_at DESC"
+);
+$commentsStmt->bindParam(':tid', $tutorial['tutorial_id'], PDO::PARAM_INT);
 $commentsStmt->execute();
 $comments = $commentsStmt->fetchAll();
 
-// Get user's existing rating if any
-$userRatingQuery = "SELECT rating FROM dbProj_ratings
-                    WHERE tutorial_id = :tutorial_id AND user_id = :user_id LIMIT 1";
-$userRatingStmt  = $conn->prepare($userRatingQuery);
-$userRatingStmt->bindParam(':tutorial_id', $tutorial['tutorial_id'], PDO::PARAM_INT);
-$userRatingStmt->bindParam(':user_id',     $current_user_id,         PDO::PARAM_INT);
-$userRatingStmt->execute();
-$user_rating_row = $userRatingStmt->fetch();
-$user_rating     = $user_rating_row ? (int)$user_rating_row['rating'] : 0;
+// ---- fetch user's existing rating ----
+$rStmt = $conn->prepare(
+    "SELECT rating FROM dbProj_ratings
+     WHERE tutorial_id = :tid AND user_id = :uid LIMIT 1"
+);
+$rStmt->bindParam(':tid', $tutorial['tutorial_id'], PDO::PARAM_INT);
+$rStmt->bindParam(':uid', $current_user_id,         PDO::PARAM_INT);
+$rStmt->execute();
+$rRow        = $rStmt->fetch();
+$user_rating = $rRow ? (int)$rRow['rating'] : 0;
 
-// Bug 4+5 fix: use correct variable name and remove undefined is_favorited
-$tutorial_id = $tutorial['tutorial_id'];
+$page_title  = $tutorial['title'];
+$avg_rating  = number_format($tutorial['avg_rating'] ?? 0, 1);
+$css_version = filemtime(__DIR__ . '/../assets/css/viewer.css');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -118,222 +117,268 @@ $tutorial_id = $tutorial['tutorial_id'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= e($tutorial['title']) ?> - <?= SITE_NAME ?></title>
-    <link rel="stylesheet" href="<?= asset('css/viewer.css') ?>">
+    <!-- cache-bust so updated CSS is always picked up -->
+    <link rel="stylesheet" href="<?= asset('css/viewer.css') ?>?v=<?= $css_version ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <?php include '../includes/viewer-nav.php'; ?>
 
-    <div class="tutorial-view-container">
-        <div class="back-navigation">
-            <a href="browse-tutorials.php" class="btn btn-outline">
-                <i class="fas fa-arrow-left"></i>
-                Back to Browse
+    <div class="tview-wrap">
+
+        <!-- back button -->
+        <div class="tview-back">
+            <a href="<?= SITE_URL ?>/viewer/browse-tutorials.php" class="btn btn-outline btn-sm">
+                <i class="fas fa-arrow-left"></i> Back to Browse
             </a>
         </div>
 
-        <div class="tutorial-header">
-            <div class="tutorial-header-content">
-                <div class="breadcrumb">
-                    <a href="../viewer/dashboard.php">Home</a>
-                    <i class="fas fa-chevron-right"></i>
-                    <a href="browse-tutorials.php">Tutorials</a>
-                    <i class="fas fa-chevron-right"></i>
-                    <span><?= e($tutorial['category_name']) ?></span>
-                </div>
+        <!-- hero header -->
+        <div class="tview-hero">
+            <div class="tview-breadcrumb">
+                <a href="<?= SITE_URL ?>/viewer/dashboard.php">Home</a>
+                <i class="fas fa-chevron-right"></i>
+                <a href="<?= SITE_URL ?>/viewer/browse-tutorials.php">Tutorials</a>
+                <i class="fas fa-chevron-right"></i>
+                <span><?= e($tutorial['category_name']) ?></span>
+            </div>
 
-                <h1><?= e($tutorial['title']) ?></h1>
-                <p class="subtitle"><?= e($tutorial['short_description']) ?></p>
+            <h1><?= e($tutorial['title']) ?></h1>
+            <p class="tview-subtitle"><?= e($tutorial['short_description']) ?></p>
 
-                <div class="tutorial-meta">
-                    <div class="meta-item">
-                        <i class="fas fa-user"></i>
-                        <div>
-                            <small>Instructor</small>
-                            <strong><?= e($tutorial['instructor_name']) ?></strong>
-                        </div>
-                    </div>
-                    <div class="meta-item">
-                        <i class="fas fa-star"></i>
-                        <div>
-                            <small>Rating</small>
-                            <strong><?= number_format($tutorial['avg_rating'], 1) ?> (<?= $tutorial['rating_count'] ?>)</strong>
-                        </div>
-                    </div>
-                    <div class="meta-item">
-                        <i class="fas fa-eye"></i>
-                        <div>
-                            <small>Views</small>
-                            <strong><?= number_format($tutorial['view_count']) ?></strong>
-                        </div>
-                    </div>
-                    <div class="meta-item">
-                        <i class="fas fa-clock"></i>
-                        <div>
-                            <small>Duration</small>
-                            <strong><?= $tutorial['duration_minutes'] ?> min</strong>
-                        </div>
-                    </div>
-                    <div class="meta-item">
-                        <i class="fas fa-signal"></i>
-                        <div>
-                            <small>Level</small>
-                            <strong><?= ucfirst($tutorial['difficulty']) ?></strong>
-                        </div>
+            <div class="tview-meta">
+                <div class="tview-meta-item">
+                    <i class="fas fa-user"></i>
+                    <div>
+                        <small>Instructor</small>
+                        <strong><?= e($tutorial['instructor_name']) ?></strong>
                     </div>
                 </div>
-
-                <div class="tutorial-actions">
-                    <!-- Bug 4 fix: use $tutorial_id (defined above) not bare $tutorial_id which was undefined -->
-                    <button class="btn btn-outline" onclick="shareTutorial()">
-                        <i class="fas fa-share-alt"></i>
-                        Share
-                    </button>
+                <div class="tview-meta-item">
+                    <i class="fas fa-star"></i>
+                    <div>
+                        <small>Rating</small>
+                        <strong><?= $avg_rating ?> / 5 (<?= $tutorial['rating_count'] ?> votes)</strong>
+                    </div>
                 </div>
+                <div class="tview-meta-item">
+                    <i class="fas fa-eye"></i>
+                    <div>
+                        <small>Views</small>
+                        <strong><?= number_format($tutorial['view_count']) ?></strong>
+                    </div>
+                </div>
+                <div class="tview-meta-item">
+                    <i class="fas fa-clock"></i>
+                    <div>
+                        <small>Duration</small>
+                        <strong><?= $tutorial['duration_minutes'] ?> min</strong>
+                    </div>
+                </div>
+                <div class="tview-meta-item">
+                    <i class="fas fa-signal"></i>
+                    <div>
+                        <small>Level</small>
+                        <strong><?= ucfirst($tutorial['difficulty']) ?></strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tview-actions">
+                <button class="btn btn-outline-white" onclick="shareTutorial()">
+                    <i class="fas fa-share-alt"></i> Share
+                </button>
             </div>
         </div>
 
         <?php displayFlashMessage(); ?>
 
-        <div class="tutorial-content-wrapper">
-            <div class="tutorial-main-content">
+        <!-- two-column layout: main content + sidebar -->
+        <div class="tview-body">
+
+            <!-- LEFT: main content -->
+            <div class="tview-main">
 
                 <?php if (!empty($tutorial['video_url'])): ?>
-                <section class="video-section">
-                    <div class="video-wrapper">
-                        <iframe src="<?= e($tutorial['video_url']) ?>" frameborder="0" allowfullscreen></iframe>
+                <div class="tview-card">
+                    <h2 class="tview-section-title"><i class="fas fa-play-circle"></i> Video</h2>
+                    <div class="tview-video-wrapper">
+                        <iframe src="<?= e($tutorial['video_url']) ?>" frameborder="0"
+                                allow="accelerometer; autoplay; encrypted-media; gyroscope"
+                                allowfullscreen></iframe>
                     </div>
-                </section>
+                </div>
                 <?php endif; ?>
 
-                <section class="content-section">
-                    <h2><i class="fas fa-book-open"></i> Tutorial Content</h2>
-                    <div class="tutorial-body">
+                <!-- tutorial body content -->
+                <div class="tview-card">
+                    <h2 class="tview-section-title"><i class="fas fa-book-open"></i> Tutorial Content</h2>
+                    <div class="tview-content-body">
                         <?= $tutorial['content'] ?>
                     </div>
-                </section>
+                </div>
 
-                <!-- Rating Section -->
-                <section class="rating-section">
-                    <h2><i class="fas fa-star"></i> Rate This Tutorial</h2>
-                    <p>Help others by sharing your experience <?= $user_rating ? '(Your current rating: ' . $user_rating . '/5)' : '' ?></p>
+                <!-- rating -->
+                <div class="tview-card">
+                    <h2 class="tview-section-title"><i class="fas fa-star"></i> Rate This Tutorial</h2>
+                    <p class="tview-hint">
+                        <?= $user_rating
+                            ? 'You rated this ' . $user_rating . '/5 — you can update your rating below.'
+                            : 'Help others by rating this tutorial.' ?>
+                    </p>
 
-                    <?php if (!empty($rating_error)): ?>
+                    <?php if ($rating_error): ?>
                         <div class="alert alert-error"><?= e($rating_error) ?></div>
                     <?php endif; ?>
 
-                    <!-- Bug 3 fix: csrfField() added to rating form -->
-                    <form method="POST" action="" class="rating-form">
+                    <form method="POST" action="" class="tview-rating-form">
                         <?php csrfField(); ?>
-                        <div class="star-rating-input">
+                        <div class="tview-stars">
                             <?php for ($i = 5; $i >= 1; $i--): ?>
-                                <input type="radio" name="rating" value="<?= $i ?>" id="star<?= $i ?>"
-                                       <?= $user_rating === $i ? 'checked' : '' ?>>
+                                <input type="radio" name="rating" value="<?= $i ?>"
+                                       id="star<?= $i ?>" <?= $user_rating === $i ? 'checked' : '' ?>>
                                 <label for="star<?= $i ?>"><i class="fas fa-star"></i></label>
                             <?php endfor; ?>
                         </div>
                         <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-check"></i>
                             <?= $user_rating ? 'Update Rating' : 'Submit Rating' ?>
                         </button>
                     </form>
-                </section>
+                </div>
 
-                <!-- Comments Section -->
-                <section class="comments-section">
-                    <h2><i class="fas fa-comments"></i> Comments (<?= count($comments) ?>)</h2>
+                <!-- comments -->
+                <div class="tview-card">
+                    <h2 class="tview-section-title">
+                        <i class="fas fa-comments"></i> Comments
+                        <span class="tview-count"><?= count($comments) ?></span>
+                    </h2>
 
-                    <?php if (!empty($comment_error)): ?>
+                    <?php if ($comment_error): ?>
                         <div class="alert alert-error"><?= e($comment_error) ?></div>
                     <?php endif; ?>
 
-                    <!-- Bug 3 fix: csrfField() added to comment form -->
-                    <form method="POST" action="" class="comment-form">
+                    <form method="POST" action="" class="tview-comment-form">
                         <?php csrfField(); ?>
-                        <div class="user-avatar">
-                            <i class="fas fa-user-circle"></i>
-                        </div>
-                        <div class="comment-input-wrapper">
-                            <textarea name="comment" placeholder="Share your thoughts..." rows="3" required></textarea>
+                        <i class="fas fa-user-circle tview-avatar-icon"></i>
+                        <div class="tview-comment-right">
+                            <textarea name="comment" rows="3"
+                                      placeholder="Share your thoughts about this tutorial..." required></textarea>
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-paper-plane"></i>
-                                Post Comment
+                                <i class="fas fa-paper-plane"></i> Post Comment
                             </button>
                         </div>
                     </form>
 
                     <?php if (empty($comments)): ?>
-                        <div class="empty-comments">
+                        <div class="tview-empty-comments">
                             <i class="fas fa-comment-slash"></i>
-                            <p>No comments yet. Be the first to share your thoughts!</p>
+                            <p>No comments yet — be the first!</p>
                         </div>
                     <?php else: ?>
-                        <div class="comments-list">
-                            <?php foreach ($comments as $comment): ?>
-                                <div class="comment-item">
-                                    <div class="comment-avatar">
-                                        <i class="fas fa-user-circle"></i>
+                        <div class="tview-comments-list">
+                            <?php foreach ($comments as $c): ?>
+                            <div class="tview-comment">
+                                <i class="fas fa-user-circle tview-comment-avatar"></i>
+                                <div class="tview-comment-body">
+                                    <div class="tview-comment-meta">
+                                        <strong><?= e($c['user_name']) ?></strong>
+                                        <span><?= timeAgo($c['created_at']) ?></span>
                                     </div>
-                                    <div class="comment-content">
-                                        <div class="comment-header">
-                                            <strong><?= e($comment['user_name']) ?></strong>
-                                            <span class="comment-date"><?= timeAgo($comment['created_at']) ?></span>
-                                        </div>
-                                        <p><?= e($comment['comment_text']) ?></p>
-                                    </div>
+                                    <p><?= e($c['comment_text']) ?></p>
                                 </div>
+                            </div>
                             <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
-                </section>
-            </div>
+                </div>
 
-            <aside class="tutorial-sidebar">
-                <div class="sidebar-card">
-                    <h3><i class="fas fa-info-circle"></i> About This Tutorial</h3>
-                    <ul class="info-list">
-                        <li><i class="fas fa-calendar"></i><span>Published <?= timeAgo($tutorial['created_at']) ?></span></li>
-                        <li><i class="fas fa-folder"></i><span>Category: <?= e($tutorial['category_name']) ?></span></li>
-                        <li><i class="fas fa-language"></i><span>Language: English</span></li>
+            </div><!-- /tview-main -->
+
+            <!-- RIGHT: sidebar -->
+            <aside class="tview-sidebar">
+
+                <div class="tview-sidebar-card">
+                    <h3><i class="fas fa-info-circle"></i> About</h3>
+                    <ul class="tview-info-list">
+                        <li><i class="fas fa-calendar-alt"></i>
+                            <span>Published <?= timeAgo($tutorial['created_at']) ?></span>
+                        </li>
+                        <li><i class="fas fa-folder"></i>
+                            <span><?= e($tutorial['category_name']) ?></span>
+                        </li>
+                        <li><i class="fas fa-signal"></i>
+                            <span><?= ucfirst($tutorial['difficulty']) ?></span>
+                        </li>
+                        <li><i class="fas fa-clock"></i>
+                            <span><?= $tutorial['duration_minutes'] ?> minutes</span>
+                        </li>
+                        <li><i class="fas fa-eye"></i>
+                            <span><?= number_format($tutorial['view_count']) ?> views</span>
+                        </li>
                     </ul>
                 </div>
 
                 <?php if (!empty($tutorial['tags'])): ?>
-                <div class="sidebar-card">
+                <div class="tview-sidebar-card">
                     <h3><i class="fas fa-tags"></i> Tags</h3>
-                    <div class="tag-list">
+                    <div class="tview-tag-list">
                         <?php foreach ($tutorial['tags'] as $tag): ?>
-                            <span class="tag-badge"><?= e($tag['tag_name']) ?></span>
+                            <span class="tview-tag"><?= e($tag['tag_name']) ?></span>
                         <?php endforeach; ?>
                     </div>
                 </div>
                 <?php endif; ?>
 
                 <?php if (!empty($tutorial['media'])): ?>
-                <div class="sidebar-card">
-                    <h3><i class="fas fa-paperclip"></i> Downloads</h3>
-                    <?php foreach ($tutorial['media'] as $media): ?>
-                        <?php if ($media['media_type'] === 'document'): ?>
-                            <a href="<?= SITE_URL ?>/uploads/<?= e($media['file_path']) ?>"
-                               class="btn btn-outline btn-sm" download>
-                                <i class="fas fa-download"></i> <?= e($media['file_name']) ?>
+                <div class="tview-sidebar-card">
+                    <h3><i class="fas fa-download"></i> Downloads</h3>
+                    <div class="tview-downloads">
+                        <?php foreach ($tutorial['media'] as $m): ?>
+                            <?php if ($m['media_type'] === 'document'): ?>
+                            <a href="<?= SITE_URL ?>/uploads/<?= e($m['file_path']) ?>"
+                               class="btn btn-outline btn-sm" download style="margin-bottom:8px;width:100%;">
+                                <i class="fas fa-file-download"></i> <?= e($m['file_name']) ?>
                             </a>
-                        <?php endif; ?>
-                    <?php endforeach; ?>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
                 <?php endif; ?>
+
+                <div class="tview-sidebar-card">
+                    <h3><i class="fas fa-star"></i> Your Rating</h3>
+                    <?php if ($user_rating): ?>
+                        <div class="tview-your-rating">
+                            <?php for ($i = 1; $i <= 5; $i++): ?>
+                                <i class="fas fa-star" style="color:<?= $i <= $user_rating ? '#ffc107' : '#e2e8f0' ?>;font-size:22px;"></i>
+                            <?php endfor; ?>
+                            <p style="margin-top:8px;color:#718096;font-size:13px;">You rated this <?= $user_rating ?>/5</p>
+                        </div>
+                    <?php else: ?>
+                        <p style="color:#718096;font-size:13px;">You haven't rated this tutorial yet. Scroll down to rate it!</p>
+                    <?php endif; ?>
+                </div>
+
             </aside>
-        </div>
-    </div>
+        </div><!-- /tview-body -->
+    </div><!-- /tview-wrap -->
 
     <script>
         function shareTutorial() {
             if (navigator.share) {
                 navigator.share({
-                    title: '<?= e($tutorial['title']) ?>',
+                    title: '<?= addslashes(e($tutorial['title'])) ?>',
                     url: window.location.href
                 });
             } else {
-                prompt('Copy this link:', window.location.href);
+                const dummy = document.createElement('input');
+                document.body.appendChild(dummy);
+                dummy.value = window.location.href;
+                dummy.select();
+                document.execCommand('copy');
+                document.body.removeChild(dummy);
+                alert('Link copied to clipboard!');
             }
         }
     </script>

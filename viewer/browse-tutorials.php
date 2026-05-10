@@ -45,7 +45,7 @@ $total_results = $pagination['total_items'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $page_title ?> - <?= SITE_NAME ?></title>
-    <link rel="stylesheet" href="<?= asset('css/viewer.css') ?>">
+    <link rel="stylesheet" href="<?= asset('css/viewer.css') ?>?v=<?= filemtime(__DIR__ . '/../assets/css/viewer.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -138,7 +138,13 @@ $total_results = $pagination['total_items'];
                     <?php foreach ($tutorials as $tutorial): ?>
                     <div class="tutorial-card-browse">
                         <div class="card-image">
-                            <img src="<?= $tutorial['thumbnail'] ?>" alt="<?= e($tutorial['title']) ?>">
+                            <?php if (!empty($tutorial['thumbnail'])): ?>
+                                <img src="<?= SITE_URL ?>/uploads/<?= e($tutorial['thumbnail']) ?>" alt="<?= e($tutorial['title']) ?>">
+                            <?php else: ?>
+                                <div style="width:100%;height:200px;background:#e8ecf1;display:flex;align-items:center;justify-content:center;">
+                                    <i class="fas fa-book" style="font-size:48px;color:#aaa;"></i>
+                                </div>
+                            <?php endif; ?>
                             <span class="difficulty-badge difficulty-<?= $tutorial['difficulty'] ?>">
                                 <?= ucfirst($tutorial['difficulty']) ?>
                             </span>
@@ -159,7 +165,12 @@ $total_results = $pagination['total_items'];
                             <p class="description"><?= truncate($tutorial['short_description'], 120) ?></p>
                             
                             <div class="instructor-info">
-                                <img src="<?= $tutorial['instructor_avatar'] ?? asset('images/default-avatar.png') ?>" alt="Instructor">
+                                <?php if (!empty($tutorial['instructor_avatar'])): ?>
+                                    <img src="<?= SITE_URL ?>/uploads/<?= e($tutorial['instructor_avatar']) ?>" alt="Instructor"
+                                         onerror="this.style.display='none'">
+                                <?php else: ?>
+                                    <i class="fas fa-user-circle" style="font-size:26px;color:#cbd5e0;"></i>
+                                <?php endif; ?>
                                 <span><?= e($tutorial['instructor_name']) ?></span>
                             </div>
                             
