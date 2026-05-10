@@ -21,12 +21,12 @@ $query = "SELECT DISTINCT t.*, c.category_name, u.full_name as instructor_name,
           COALESCE(ua.progress_percentage, 0) as progress,
           COALESCE(AVG(r.rating), 0) as avg_rating,
           COUNT(DISTINCT r2.rating_id) as rating_count
-          FROM techknow_user_activity ua
-          JOIN techknow_tutorials t ON ua.tutorial_id = t.tutorial_id
-          JOIN techknow_categories c ON t.category_id = c.category_id
-          JOIN techknow_users u ON t.instructor_id = u.user_id
-          LEFT JOIN techknow_ratings r ON t.tutorial_id = r.tutorial_id
-          LEFT JOIN techknow_ratings r2 ON t.tutorial_id = r2.tutorial_id
+          FROM dbProj_user_activity ua
+          JOIN dbProj_tutorials t ON ua.tutorial_id = t.tutorial_id
+          JOIN dbProj_categories c ON t.category_id = c.category_id
+          JOIN dbProj_users u ON t.instructor_id = u.user_id
+          LEFT JOIN dbProj_ratings r ON t.tutorial_id = r.tutorial_id
+          LEFT JOIN dbProj_ratings r2 ON t.tutorial_id = r2.tutorial_id
           WHERE ua.user_id = :user_id";
 
 // Apply tab filter

@@ -15,12 +15,12 @@ $success = '';
 $database = new Database();
 $conn = $database->connect();
 
-$categoriesQuery = "SELECT category_id, category_name FROM techknow_categories ORDER BY category_name";
+$categoriesQuery = "SELECT category_id, category_name FROM dbProj_categories ORDER BY category_name";
 $categoriesStmt = $conn->query($categoriesQuery);
 $categories = $categoriesStmt->fetchAll();
 
 // getting the list of tags
-$tagsQuery = "SELECT tag_id, tag_name FROM techknow_tags ORDER BY tag_name";
+$tagsQuery = "SELECT tag_id, tag_name FROM dbProj_tags ORDER BY tag_name";
 $tagsStmt = $conn->query($tagsQuery);
 $tags = $tagsStmt->fetchAll();
 
@@ -35,15 +35,97 @@ $form_data = [
     'status' => 'draft'
 ];
 
-// handling the post request will do this once the tutorial class is done
+// handling the post request
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!verifyCsrfFromPost()) {
         $error = 'Invalid security token. Please try again.';
     } else {
-    // waiting for samana to finish her part before i code this
-    $success = 'Tutorial creation will be implemented when Tutorial class is ready!';
-}
+        require_once '../classes/Tutorial.php';
+
+        // collect and sanitize inputs
+        $title             = clean($_POST['title']             ?? '');
+        $short_description = clean($_POST['short_description'] ?? '');
+        $content           = $_POST['content']                  ?? '';
+        $category_id       = (int)($_POST['category_id']        ?? 0);
+        $difficulty        = clean($_POST['difficulty']         ?? 'beginner');
+        $duration_minutes  = !empty($_POST['duration_minutes']) ? (int)$_POST['duration_minutes'] : null;
+        $video_url         = clean($_POST['video_url']          ?? '');
+        $status            = clean($_POST['status']             ?? 'draft');
+        $selected_tags     = $_POST['tags']                     ?? [];
+
+        // keep form values so they don't disappear on error
+        $form_data = [
+            'title'            => $title,
+            'short_description'=> $short_description,
+            'content'          => $content,
+            'category_id'      => $category_id,
+            'difficulty'       => $difficulty,
+            'duration_minutes' => $duration_minutes,
+            'status'           => $status,
+        ];
+
+        // server-side validation
+        if (empty($title)) {
+            $error = 'Title is required.';
+        } elseif (strlen($title) > 255) {
+            $error = 'Title must be 255 characters or less.';
+        } elseif (empty($short_description)) {
+            $error = 'Short description is required.';
+        } elseif (strlen($short_description) > 300) {
+            $error = 'Short description must be 300 characters or less.';
+        } elseif (empty($content)) {
+            $error = 'Tutorial content is required.';
+        } elseif (empty($category_id)) {
+            $error = 'Please select a category.';
+        } elseif (!in_array($difficulty, ['beginner', 'intermediate', 'advanced'])) {
+            $error = 'Invalid difficulty level.';
+        } elseif (!in_array($status, ['draft', 'published'])) {
+            $error = 'Invalid status.';
+        } else {
+            $tutorialObj = new Tutorial();
+            $result = $tutorialObj->create([
+                'title'            => $title,
+                'short_description'=> $short_description,
+                'content'          => $content,
+                'category_id'      => $category_id,
+                'instructor_id'    => $current_user_id,
+                'difficulty'       => $difficulty,
+                'duration_minutes' => $duration_minutes,
+                'video_url'        => $video_url,
+                'status'           => $status,
+                'tags'             => $selected_tags,
+            ]);
+
+            // handle thumbnail upload if one was provided
+            if ($result['success'] && !empty($_FILES['thumbnail']['name'])) {
+                $tutorialObj->uploadMedia($result['tutorial_id'], $_FILES['thumbnail'], 'image');
+            }
+
+            // handle additional files
+            if ($result['success'] && !empty($_FILES['additional_files']['name'][0])) {
+                foreach ($_FILES['additional_files']['tmp_name'] as $key => $tmp) {
+                    if ($_FILES['additional_files']['error'][$key] === UPLOAD_ERR_OK) {
+                        $single = [
+                            'name'     => $_FILES['additional_files']['name'][$key],
+                            'type'     => $_FILES['additional_files']['type'][$key],
+                            'tmp_name' => $tmp,
+                            'error'    => $_FILES['additional_files']['error'][$key],
+                            'size'     => $_FILES['additional_files']['size'][$key],
+                        ];
+                        $tutorialObj->uploadMedia($result['tutorial_id'], $single, 'document');
+                    }
+                }
+            }
+
+            if ($result['success']) {
+                setFlashMessage('Tutorial created successfully!', 'success');
+                redirect('creator/my-tutorials.php');
+            } else {
+                $error = $result['message'] ?? 'Failed to create tutorial. Please try again.';
+            }
+        }
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -55,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="<?= asset('css/creator.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- editor for the tutorial content -->
-    <script src="https://cdn.tiny.mce.com/1/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tinymce@5.10.7/tinymce.min.js" referrerpolicy="origin"></script>
 </head>
 <body>
     <?php include '../includes/creator-nav.php'; ?>

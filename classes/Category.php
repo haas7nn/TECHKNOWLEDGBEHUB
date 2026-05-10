@@ -9,7 +9,7 @@ require_once __DIR__ . '/../config/database.php';
 
 class Category {
     private $conn;
-    private $table = 'techknow_categories';
+    private $table = 'dbProj_categories';
     
     public function __construct() {
         $database = new Database();
@@ -58,7 +58,7 @@ class Category {
                     c.*,
                     COUNT(t.tutorial_id) as tutorial_count
                   FROM " . $this->table . " c
-                  LEFT JOIN techknow_tutorials t ON c.category_id = t.category_id 
+                  LEFT JOIN dbProj_tutorials t ON c.category_id = t.category_id 
                     AND t.status = 'published'
                   GROUP BY c.category_id
                   ORDER BY c.category_name ASC";
@@ -126,7 +126,7 @@ class Category {
      */
     public function delete($category_id) {
         // Check if category has tutorials
-        $checkQuery = "SELECT COUNT(*) as count FROM techknow_tutorials WHERE category_id = :id";
+        $checkQuery = "SELECT COUNT(*) as count FROM dbProj_tutorials WHERE category_id = :id";
         $checkStmt = $this->conn->prepare($checkQuery);
         $checkStmt->bindParam(':id', $category_id, PDO::PARAM_INT);
         $checkStmt->execute();

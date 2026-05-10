@@ -38,11 +38,11 @@ if ($tutorial['instructor_id'] != $current_user_id && !isAdmin()) {
 $database = new Database();
 $conn = $database->connect();
 
-$categoriesQuery = "SELECT category_id, category_name FROM techknow_categories ORDER BY category_name";
+$categoriesQuery = "SELECT category_id, category_name FROM dbProj_categories ORDER BY category_name";
 $categoriesStmt = $conn->query($categoriesQuery);
 $categories = $categoriesStmt->fetchAll();
 
-$tagsQuery = "SELECT tag_id, tag_name FROM techknow_tags ORDER BY tag_name";
+$tagsQuery = "SELECT tag_id, tag_name FROM dbProj_tags ORDER BY tag_name";
 $tagsStmt = $conn->query($tagsQuery);
 $all_tags = $tagsStmt->fetchAll();
 
@@ -54,7 +54,10 @@ $success = '';
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    
+
+    if (!verifyCsrfFromPost()) {
+        $error = 'Invalid security token. Please refresh the page and try again.';
+    } else {
     $update_data = [
         'title' => clean($_POST['title']),
         'short_description' => clean($_POST['short_description']),
@@ -102,6 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+    } // end CSRF else
 }
 ?>
 <!DOCTYPE html>
@@ -112,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title><?= $page_title ?> - <?= SITE_NAME ?></title>
     <link rel="stylesheet" href="<?= asset('css/creator.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn.tiny.mce.com/1/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tinymce@5.10.7/tinymce.min.js" referrerpolicy="origin"></script>
 </head>
 <body>
     <?php include '../includes/creator-nav.php'; ?>
@@ -143,6 +147,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <!-- Edit Form (Same structure as create but pre-filled) -->
             <form method="POST" action="" enctype="multipart/form-data" class="tutorial-form">
+                <?php csrfField(); ?>
                 
                 <!-- Basic Information -->
                 <div class="form-section">

@@ -13,7 +13,7 @@ class Tutorial {
     private $conn;
     
     /** @var string */
-    private $table = 'techknow_tutorials';
+    private $table = 'dbProj_tutorials';
     
     // tutorial properties
     /** @var int|null */
@@ -189,7 +189,7 @@ class Tutorial {
      * @return bool
      */
     private function attachTags($tutorial_id, $tags) {
-        $query = "INSERT INTO techknow_tutorial_tags (tutorial_id, tag_id) VALUES (:tutorial_id, :tag_id)";
+        $query = "INSERT INTO dbProj_tutorial_tags (tutorial_id, tag_id) VALUES (:tutorial_id, :tag_id)";
         $stmt = $this->conn->prepare($query);
         
         foreach ($tags as $tag_id) {
@@ -208,7 +208,7 @@ class Tutorial {
      * @return bool
      */
     private function attachMedia($tutorial_id, $media) {
-        $query = "INSERT INTO techknow_tutorial_media 
+        $query = "INSERT INTO dbProj_tutorial_media 
                   (tutorial_id, media_type, file_path, file_name, file_size) 
                   VALUES (:tutorial_id, :media_type, :file_path, :file_name, :file_size)";
         
@@ -242,12 +242,12 @@ class Tutorial {
                     c.category_name,
                     u.full_name as instructor_name,
                     u.profile_picture as instructor_avatar,
-                    (SELECT AVG(rating) FROM techknow_ratings WHERE tutorial_id = t.tutorial_id) as avg_rating,
-                    (SELECT COUNT(*) FROM techknow_ratings WHERE tutorial_id = t.tutorial_id) as rating_count,
-                    (SELECT COUNT(*) FROM techknow_comments WHERE tutorial_id = t.tutorial_id) as comment_count
+                    (SELECT AVG(rating) FROM dbProj_ratings WHERE tutorial_id = t.tutorial_id) as avg_rating,
+                    (SELECT COUNT(*) FROM dbProj_ratings WHERE tutorial_id = t.tutorial_id) as rating_count,
+                    (SELECT COUNT(*) FROM dbProj_comments WHERE tutorial_id = t.tutorial_id) as comment_count
                   FROM " . $this->table . " t
-                  LEFT JOIN techknow_categories c ON t.category_id = c.category_id
-                  LEFT JOIN techknow_users u ON t.instructor_id = u.user_id
+                  LEFT JOIN dbProj_categories c ON t.category_id = c.category_id
+                  LEFT JOIN dbProj_users u ON t.instructor_id = u.user_id
                   WHERE t.status = 'published'
                   ORDER BY t.created_at DESC
                   LIMIT :limit OFFSET :offset";
@@ -298,12 +298,12 @@ class Tutorial {
                     u.full_name as instructor_name,
                     u.profile_picture as instructor_avatar,
                     u.bio as instructor_bio,
-                    (SELECT AVG(rating) FROM techknow_ratings WHERE tutorial_id = t.tutorial_id) as avg_rating,
-                    (SELECT COUNT(*) FROM techknow_ratings WHERE tutorial_id = t.tutorial_id) as rating_count,
-                    (SELECT COUNT(*) FROM techknow_comments WHERE tutorial_id = t.tutorial_id) as comment_count
+                    (SELECT AVG(rating) FROM dbProj_ratings WHERE tutorial_id = t.tutorial_id) as avg_rating,
+                    (SELECT COUNT(*) FROM dbProj_ratings WHERE tutorial_id = t.tutorial_id) as rating_count,
+                    (SELECT COUNT(*) FROM dbProj_comments WHERE tutorial_id = t.tutorial_id) as comment_count
                   FROM " . $this->table . " t
-                  LEFT JOIN techknow_categories c ON t.category_id = c.category_id
-                  LEFT JOIN techknow_users u ON t.instructor_id = u.user_id
+                  LEFT JOIN dbProj_categories c ON t.category_id = c.category_id
+                  LEFT JOIN dbProj_users u ON t.instructor_id = u.user_id
                   WHERE t.slug = :slug
                   LIMIT 1";
         
@@ -342,8 +342,8 @@ class Tutorial {
                     c.category_name,
                     u.full_name as instructor_name
                   FROM " . $this->table . " t
-                  LEFT JOIN techknow_categories c ON t.category_id = c.category_id
-                  LEFT JOIN techknow_users u ON t.instructor_id = u.user_id
+                  LEFT JOIN dbProj_categories c ON t.category_id = c.category_id
+                  LEFT JOIN dbProj_users u ON t.instructor_id = u.user_id
                   WHERE t.tutorial_id = :tutorial_id
                   LIMIT 1";
         
@@ -373,8 +373,8 @@ class Tutorial {
      */
     private function getTutorialTags($tutorial_id) {
         $query = "SELECT t.tag_id, t.tag_name 
-                  FROM techknow_tags t
-                  INNER JOIN techknow_tutorial_tags tt ON t.tag_id = tt.tag_id
+                  FROM dbProj_tags t
+                  INNER JOIN dbProj_tutorial_tags tt ON t.tag_id = tt.tag_id
                   WHERE tt.tutorial_id = :tutorial_id";
         
         try {
@@ -394,7 +394,7 @@ class Tutorial {
      * @return array<int, array<string, mixed>>
      */
     private function getTutorialMedia($tutorial_id) {
-        $query = "SELECT * FROM techknow_tutorial_media 
+        $query = "SELECT * FROM dbProj_tutorial_media 
                   WHERE tutorial_id = :tutorial_id 
                   ORDER BY uploaded_at DESC";
         
@@ -427,9 +427,12 @@ public function search($filters = [], $page = 1, $limit = 12) {
     // Full-text search on title and content (FIXED)
     if (!empty($filters['search'])) {
         // Use LIKE instead of MATCH for broader compatibility
-        $where[] = "(t.title LIKE :search OR t.short_description LIKE :search OR t.content LIKE :search)";
+        // PDO named params can only be bound once per statement, so use unique names
+        $where[] = "(t.title LIKE :search1 OR t.short_description LIKE :search2 OR t.content LIKE :search3)";
         $searchParam = '%' . $filters['search'] . '%';
-        $params[':search'] = $searchParam;
+        $params[':search1'] = $searchParam;
+        $params[':search2'] = $searchParam;
+        $params[':search3'] = $searchParam;
         $useFullText = true;
     }
     
@@ -487,10 +490,10 @@ public function search($filters = [], $page = 1, $limit = 12) {
                 COUNT(DISTINCT r.rating_id) as rating_count,
                 COUNT(DISTINCT cm.comment_id) as comment_count
               FROM " . $this->table . " t
-              LEFT JOIN techknow_categories c ON t.category_id = c.category_id
-              LEFT JOIN techknow_users u ON t.instructor_id = u.user_id
-              LEFT JOIN techknow_ratings r ON t.tutorial_id = r.tutorial_id
-              LEFT JOIN techknow_comments cm ON t.tutorial_id = cm.tutorial_id
+              LEFT JOIN dbProj_categories c ON t.category_id = c.category_id
+              LEFT JOIN dbProj_users u ON t.instructor_id = u.user_id
+              LEFT JOIN dbProj_ratings r ON t.tutorial_id = r.tutorial_id
+              LEFT JOIN dbProj_comments cm ON t.tutorial_id = cm.tutorial_id
               WHERE $whereClause
               GROUP BY t.tutorial_id
               ORDER BY $orderBy
@@ -603,7 +606,7 @@ public function search($filters = [], $page = 1, $limit = 12) {
             // update tags if provided
             if (!empty($tags)) {
                 // remove old tags
-                $deleteTagsQuery = "DELETE FROM techknow_tutorial_tags WHERE tutorial_id = :tutorial_id";
+                $deleteTagsQuery = "DELETE FROM dbProj_tutorial_tags WHERE tutorial_id = :tutorial_id";
                 $deleteStmt = $this->conn->prepare($deleteTagsQuery);
                 $deleteStmt->bindParam(':tutorial_id', $tutorial_id, PDO::PARAM_INT);
                 $deleteStmt->execute();
@@ -661,13 +664,13 @@ public function search($filters = [], $page = 1, $limit = 12) {
             $this->conn->beginTransaction();
             
             // delete tags
-            $deleteTagsQuery = "DELETE FROM techknow_tutorial_tags WHERE tutorial_id = :tutorial_id";
+            $deleteTagsQuery = "DELETE FROM dbProj_tutorial_tags WHERE tutorial_id = :tutorial_id";
             $stmt1 = $this->conn->prepare($deleteTagsQuery);
             $stmt1->bindParam(':tutorial_id', $tutorial_id, PDO::PARAM_INT);
             $stmt1->execute();
             
             // delete media
-            $deleteMediaQuery = "DELETE FROM techknow_tutorial_media WHERE tutorial_id = :tutorial_id";
+            $deleteMediaQuery = "DELETE FROM dbProj_tutorial_media WHERE tutorial_id = :tutorial_id";
             $stmt2 = $this->conn->prepare($deleteMediaQuery);
             $stmt2->bindParam(':tutorial_id', $tutorial_id, PDO::PARAM_INT);
             $stmt2->execute();
@@ -697,18 +700,12 @@ public function search($filters = [], $page = 1, $limit = 12) {
      */
     public function logView($tutorial_id, $user_id = null) {
         try {
-            // increment view count (trigger will handle this if trigger exists)
-            $query = "UPDATE " . $this->table . " 
-                      SET view_count = view_count + 1 
-                      WHERE tutorial_id = :tutorial_id";
-            
-            $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(':tutorial_id', $tutorial_id, PDO::PARAM_INT);
-            $stmt->execute();
-            
-            // log in user activity if user is logged in
+            // If user is logged in, insert into activity table.
+            // The UpdateViewCount trigger fires on INSERT into dbProj_user_activity
+            // and increments view_count automatically — so we do NOT manually update
+            // view_count here to avoid double-counting.
             if ($user_id) {
-                $activityQuery = "INSERT INTO techknow_user_activity 
+                $activityQuery = "INSERT INTO dbProj_user_activity 
                                   (user_id, tutorial_id, activity_type, activity_date) 
                                   VALUES (:user_id, :tutorial_id, 'view', NOW())
                                   ON DUPLICATE KEY UPDATE activity_date = NOW()";
@@ -717,6 +714,14 @@ public function search($filters = [], $page = 1, $limit = 12) {
                 $activityStmt->bindParam(':user_id', $user_id, PDO::PARAM_INT);
                 $activityStmt->bindParam(':tutorial_id', $tutorial_id, PDO::PARAM_INT);
                 $activityStmt->execute();
+            } else {
+                // Guest view — trigger won't fire, so increment manually
+                $query = "UPDATE " . $this->table . " 
+                          SET view_count = view_count + 1 
+                          WHERE tutorial_id = :tutorial_id";
+                $stmt = $this->conn->prepare($query);
+                $stmt->bindParam(':tutorial_id', $tutorial_id, PDO::PARAM_INT);
+                $stmt->execute();
             }
             
             return true;
@@ -746,7 +751,7 @@ public function uploadMedia($tutorial_id, $file, $type = 'document') {
     }
     
     // save to database
-    $query = "INSERT INTO techknow_tutorial_media 
+    $query = "INSERT INTO dbProj_tutorial_media 
               (tutorial_id, media_type, file_path, file_name, file_size) 
               VALUES (:tutorial_id, :media_type, :file_path, :file_name, :file_size)";
     
@@ -780,7 +785,7 @@ public function uploadMedia($tutorial_id, $file, $type = 'document') {
      */
     public function deleteMedia($media_id) {
         // get file path first
-        $query = "SELECT file_path FROM techknow_tutorial_media WHERE media_id = :media_id";
+        $query = "SELECT file_path FROM dbProj_tutorial_media WHERE media_id = :media_id";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':media_id', $media_id, PDO::PARAM_INT);
         $stmt->execute();
@@ -790,7 +795,7 @@ public function uploadMedia($tutorial_id, $file, $type = 'document') {
             $file_path = UPLOAD_PATH . 'tutorials/' . $media['file_path'];
             
             // delete from database
-            $deleteQuery = "DELETE FROM techknow_tutorial_media WHERE media_id = :media_id";
+            $deleteQuery = "DELETE FROM dbProj_tutorial_media WHERE media_id = :media_id";
             $deleteStmt = $this->conn->prepare($deleteQuery);
             $deleteStmt->bindParam(':media_id', $media_id, PDO::PARAM_INT);
             
@@ -818,11 +823,11 @@ public function uploadMedia($tutorial_id, $file, $type = 'document') {
         $query = "SELECT 
                     t.*,
                     c.category_name,
-                    (SELECT AVG(rating) FROM techknow_ratings WHERE tutorial_id = t.tutorial_id) as avg_rating,
-                    (SELECT COUNT(*) FROM techknow_ratings WHERE tutorial_id = t.tutorial_id) as rating_count,
-                    (SELECT COUNT(*) FROM techknow_comments WHERE tutorial_id = t.tutorial_id) as comment_count
+                    (SELECT AVG(rating) FROM dbProj_ratings WHERE tutorial_id = t.tutorial_id) as avg_rating,
+                    (SELECT COUNT(*) FROM dbProj_ratings WHERE tutorial_id = t.tutorial_id) as rating_count,
+                    (SELECT COUNT(*) FROM dbProj_comments WHERE tutorial_id = t.tutorial_id) as comment_count
                   FROM " . $this->table . " t
-                  LEFT JOIN techknow_categories c ON t.category_id = c.category_id
+                  LEFT JOIN dbProj_categories c ON t.category_id = c.category_id
                   WHERE t.instructor_id = :instructor_id";
         
         if (!empty($status)) {

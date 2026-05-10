@@ -13,7 +13,7 @@ class User {
     private $conn;
     
     /** @var string */
-    private $table = 'techknow_users';
+    private $table = 'dbProj_users';
     
     // user properties
     /** @var int|null */
@@ -291,9 +291,10 @@ class User {
                   FROM " . $this->table . " 
                   WHERE 1=1";
         
-        // filter by search term
+        // filter by search term — use two unique param names since PDO
+        // only allows a named placeholder to be bound once per statement
         if (!empty($search)) {
-            $query .= " AND (full_name LIKE :search OR email LIKE :search)";
+            $query .= " AND (full_name LIKE :search1 OR email LIKE :search2)";
         }
         
         // filter by role
@@ -313,7 +314,8 @@ class User {
             
             if (!empty($search)) {
                 $searchParam = "%{$search}%";
-                $stmt->bindParam(':search', $searchParam, PDO::PARAM_STR);
+                $stmt->bindValue(':search1', $searchParam, PDO::PARAM_STR);
+                $stmt->bindValue(':search2', $searchParam, PDO::PARAM_STR);
             }
             
             if (!empty($role)) {
@@ -514,17 +516,23 @@ class User {
      * @return array<string, int> user stats
      */
     public function getUserStats($user_id) {
+        // PDO named params can only be bound once per statement.
+        // Use unique names :uid1–:uid5 for each occurrence.
         $query = "SELECT 
-                    (SELECT COUNT(*) FROM techknow_tutorials WHERE instructor_id = :user_id) as total_tutorials,
-                    (SELECT COUNT(*) FROM techknow_comments WHERE user_id = :user_id) as total_comments,
-                    (SELECT COUNT(*) FROM techknow_ratings WHERE user_id = :user_id) as total_ratings,
-                    (SELECT COUNT(*) FROM techknow_user_activity WHERE user_id = :user_id AND activity_type = 'complete') as completed_tutorials
+                    (SELECT COUNT(*) FROM dbProj_tutorials WHERE instructor_id = :uid1) as total_tutorials,
+                    (SELECT COUNT(*) FROM dbProj_comments WHERE user_id = :uid2) as total_comments,
+                    (SELECT COUNT(*) FROM dbProj_ratings WHERE user_id = :uid3) as total_ratings,
+                    (SELECT COUNT(*) FROM dbProj_user_activity WHERE user_id = :uid4 AND activity_type = 'complete') as completed_tutorials
                   FROM " . $this->table . " 
-                  WHERE user_id = :user_id";
+                  WHERE user_id = :uid5";
         
         try {
             $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(':user_id', $user_id, PDO::PARAM_INT);
+            $stmt->bindValue(':uid1', $user_id, PDO::PARAM_INT);
+            $stmt->bindValue(':uid2', $user_id, PDO::PARAM_INT);
+            $stmt->bindValue(':uid3', $user_id, PDO::PARAM_INT);
+            $stmt->bindValue(':uid4', $user_id, PDO::PARAM_INT);
+            $stmt->bindValue(':uid5', $user_id, PDO::PARAM_INT);
             $stmt->execute();
             
             $result = $stmt->fetch(PDO::FETCH_ASSOC);

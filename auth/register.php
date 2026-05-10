@@ -71,8 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $success = $result['message'];
             // clear the form since we are good to go
             $form_data = ['full_name' => '', 'email' => '', 'role' => 'viewer'];
-            // let them see the success message for 2 seconds then move to login
-            header("refresh:2;url=login.php");
+            // redirect is handled via JS after the success message renders (see bottom of page)
         } else {
             $error = $result['message'];
         }
@@ -354,5 +353,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     </script>
+
+    <?php if (!empty($success)): ?>
+    <!-- Bug 16 fix: JS redirect works after page output, unlike header("refresh:...") -->
+    <script>
+        setTimeout(function() {
+            window.location.href = 'login.php';
+        }, 2000);
+    </script>
+    <?php endif; ?>
 </body>
 </html>

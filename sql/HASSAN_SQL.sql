@@ -19,10 +19,10 @@ USE techknowledge_hub;
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- Table 1: techknow_users
+-- Table 1: dbProj_users
 -- Stores user accounts with authentication and profile information
 -- ----------------------------------------------------------------------------
-CREATE TABLE techknow_users (
+CREATE TABLE dbProj_users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
     full_name VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
@@ -42,10 +42,10 @@ CREATE TABLE techknow_users (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------
--- Table 2: techknow_categories
+-- Table 2: dbProj_categories
 -- Stores tutorial categories (Web Dev, Database and everything else needed)
 -- ----------------------------------------------------------------------------
-CREATE TABLE techknow_categories (
+CREATE TABLE dbProj_categories (
     category_id INT AUTO_INCREMENT PRIMARY KEY,
     category_name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT NULL,
@@ -57,10 +57,10 @@ CREATE TABLE techknow_categories (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------
--- Table 3: techknow_tutorials
+-- Table 3: dbProj_tutorials
 -- Main content table storing all tutorial information
 -- ----------------------------------------------------------------------------
-CREATE TABLE techknow_tutorials (
+CREATE TABLE dbProj_tutorials (
     tutorial_id INT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     slug VARCHAR(255) NOT NULL UNIQUE,
@@ -79,9 +79,9 @@ CREATE TABLE techknow_tutorials (
     published_at DATETIME NULL,
     
     -- Foreign Keys
-    FOREIGN KEY (category_id) REFERENCES techknow_categories(category_id) 
+    FOREIGN KEY (category_id) REFERENCES dbProj_categories(category_id) 
         ON DELETE RESTRICT ON UPDATE CASCADE,
-    FOREIGN KEY (instructor_id) REFERENCES techknow_users(user_id) 
+    FOREIGN KEY (instructor_id) REFERENCES dbProj_users(user_id) 
         ON DELETE CASCADE ON UPDATE CASCADE,
     
     -- Full-text search index (all of it)
@@ -98,10 +98,10 @@ CREATE TABLE techknow_tutorials (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------
--- Table 4: techknow_tutorial_media
+-- Table 4: dbProj_tutorial_media
 -- Stores uploaded files (images, videos, PDFs) for tutorials
 -- ----------------------------------------------------------------------------
-CREATE TABLE techknow_tutorial_media (
+CREATE TABLE dbProj_tutorial_media (
     media_id INT AUTO_INCREMENT PRIMARY KEY,
     tutorial_id INT NOT NULL,
     media_type ENUM('image', 'video', 'document') NOT NULL,
@@ -111,7 +111,7 @@ CREATE TABLE techknow_tutorial_media (
     uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     
     -- Foreign Key
-    FOREIGN KEY (tutorial_id) REFERENCES techknow_tutorials(tutorial_id) 
+    FOREIGN KEY (tutorial_id) REFERENCES dbProj_tutorials(tutorial_id) 
         ON DELETE CASCADE ON UPDATE CASCADE,
     
     -- Indexes
@@ -120,10 +120,10 @@ CREATE TABLE techknow_tutorial_media (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------
--- Table 5: techknow_ratings
+-- Table 5: dbProj_ratings
 -- Stores user ratings for tutorials (1-5 stars)
 -- ----------------------------------------------------------------------------
-CREATE TABLE techknow_ratings (
+CREATE TABLE dbProj_ratings (
     rating_id INT AUTO_INCREMENT PRIMARY KEY,
     tutorial_id INT NOT NULL,
     user_id INT NOT NULL,
@@ -131,9 +131,9 @@ CREATE TABLE techknow_ratings (
     rated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     
     -- Foreign Keys
-    FOREIGN KEY (tutorial_id) REFERENCES techknow_tutorials(tutorial_id) 
+    FOREIGN KEY (tutorial_id) REFERENCES dbProj_tutorials(tutorial_id) 
         ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES techknow_users(user_id) 
+    FOREIGN KEY (user_id) REFERENCES dbProj_users(user_id) 
         ON DELETE CASCADE ON UPDATE CASCADE,
     
     -- Unique constraint: one rating per user per tutorial
@@ -146,10 +146,10 @@ CREATE TABLE techknow_ratings (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------
--- Table 6: techknow_comments
+-- Table 6: dbProj_comments
 -- Stores user comments with support for nested replies
 -- ----------------------------------------------------------------------------
-CREATE TABLE techknow_comments (
+CREATE TABLE dbProj_comments (
     comment_id INT AUTO_INCREMENT PRIMARY KEY,
     tutorial_id INT NOT NULL,
     user_id INT NOT NULL,
@@ -160,11 +160,11 @@ CREATE TABLE techknow_comments (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
     -- Foreign Keys
-    FOREIGN KEY (tutorial_id) REFERENCES techknow_tutorials(tutorial_id) 
+    FOREIGN KEY (tutorial_id) REFERENCES dbProj_tutorials(tutorial_id) 
         ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES techknow_users(user_id) 
+    FOREIGN KEY (user_id) REFERENCES dbProj_users(user_id) 
         ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (parent_comment_id) REFERENCES techknow_comments(comment_id) 
+    FOREIGN KEY (parent_comment_id) REFERENCES dbProj_comments(comment_id) 
         ON DELETE CASCADE ON UPDATE CASCADE,
     
     -- Indexes
@@ -176,10 +176,10 @@ CREATE TABLE techknow_comments (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------
--- Table 7: techknow_tags
+-- Table 7: dbProj_tags
 -- Stores tags for categorizing tutorials (for example "php", "mysql", "beginner")
 -- ----------------------------------------------------------------------------
-CREATE TABLE techknow_tags (
+CREATE TABLE dbProj_tags (
     tag_id INT AUTO_INCREMENT PRIMARY KEY,
     tag_name VARCHAR(50) NOT NULL UNIQUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -189,10 +189,10 @@ CREATE TABLE techknow_tags (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------
--- Table 8: techknow_tutorial_tags
+-- Table 8: dbProj_tutorial_tags
 -- Junction table for many-to-many relationship between tutorials and tags
 -- ----------------------------------------------------------------------------
-CREATE TABLE techknow_tutorial_tags (
+CREATE TABLE dbProj_tutorial_tags (
     tutorial_id INT NOT NULL,
     tag_id INT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -201,9 +201,9 @@ CREATE TABLE techknow_tutorial_tags (
     PRIMARY KEY (tutorial_id, tag_id),
     
     -- Foreign Keys
-    FOREIGN KEY (tutorial_id) REFERENCES techknow_tutorials(tutorial_id) 
+    FOREIGN KEY (tutorial_id) REFERENCES dbProj_tutorials(tutorial_id) 
         ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (tag_id) REFERENCES techknow_tags(tag_id) 
+    FOREIGN KEY (tag_id) REFERENCES dbProj_tags(tag_id) 
         ON DELETE CASCADE ON UPDATE CASCADE,
     
     -- Indexes (automatic on FK but explicit for clarity)
@@ -212,10 +212,10 @@ CREATE TABLE techknow_tutorial_tags (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------
--- Table 9: techknow_user_activity
+-- Table 9: dbProj_user_activity
 -- Tracks user viewing and completion of tutorials
 -- ----------------------------------------------------------------------------
-CREATE TABLE techknow_user_activity (
+CREATE TABLE dbProj_user_activity (
     activity_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     tutorial_id INT NOT NULL,
@@ -223,9 +223,9 @@ CREATE TABLE techknow_user_activity (
     activity_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     
     -- Foreign Keys
-    FOREIGN KEY (user_id) REFERENCES techknow_users(user_id) 
+    FOREIGN KEY (user_id) REFERENCES dbProj_users(user_id) 
         ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (tutorial_id) REFERENCES techknow_tutorials(tutorial_id) 
+    FOREIGN KEY (tutorial_id) REFERENCES dbProj_tutorials(tutorial_id) 
         ON DELETE CASCADE ON UPDATE CASCADE,
     
     -- Indexes
@@ -246,11 +246,11 @@ CREATE TABLE techknow_user_activity (
 DELIMITER //
 
 CREATE TRIGGER UpdateViewCount
-AFTER INSERT ON techknow_user_activity
+AFTER INSERT ON dbProj_user_activity
 FOR EACH ROW
 BEGIN
     IF NEW.activity_type = 'view' THEN
-        UPDATE techknow_tutorials 
+        UPDATE dbProj_tutorials 
         SET view_count = view_count + 1 
         WHERE tutorial_id = NEW.tutorial_id;
     END IF;
@@ -265,7 +265,7 @@ DELIMITER ;
 DELIMITER //
 
 CREATE TRIGGER SetPublishedDate
-BEFORE UPDATE ON techknow_tutorials
+BEFORE UPDATE ON dbProj_tutorials
 FOR EACH ROW
 BEGIN
     IF OLD.status != 'published' AND NEW.status = 'published' THEN
@@ -312,11 +312,11 @@ BEGIN
         COUNT(DISTINCT r.rating_id) AS rating_count,
         COALESCE(AVG(r.rating), 0) AS average_rating,
         COUNT(DISTINCT c.comment_id) AS comment_count
-    FROM techknow_tutorials t
-    INNER JOIN techknow_users u ON t.instructor_id = u.user_id
-    INNER JOIN techknow_categories cat ON t.category_id = cat.category_id
-    LEFT JOIN techknow_ratings r ON t.tutorial_id = r.tutorial_id
-    LEFT JOIN techknow_comments c ON t.tutorial_id = c.comment_id AND c.status = 'approved'
+    FROM dbProj_tutorials t
+    INNER JOIN dbProj_users u ON t.instructor_id = u.user_id
+    INNER JOIN dbProj_categories cat ON t.category_id = cat.category_id
+    LEFT JOIN dbProj_ratings r ON t.tutorial_id = r.tutorial_id
+    LEFT JOIN dbProj_comments c ON t.tutorial_id = c.tutorial_id AND c.status = 'approved'
     WHERE t.status = 'published'
     AND DATE(t.published_at) BETWEEN startDate AND endDate
     GROUP BY t.tutorial_id
@@ -353,10 +353,10 @@ BEGIN
         COUNT(DISTINCT c.comment_id) AS total_comments,
         COUNT(DISTINCT CASE WHEN t.status = 'published' THEN t.tutorial_id END) AS published_tutorials,
         COUNT(DISTINCT CASE WHEN t.status = 'draft' THEN t.tutorial_id END) AS draft_tutorials
-    FROM techknow_users u
-    LEFT JOIN techknow_tutorials t ON u.user_id = t.instructor_id
-    LEFT JOIN techknow_ratings r ON t.tutorial_id = r.tutorial_id
-    LEFT JOIN techknow_comments c ON t.tutorial_id = c.comment_id AND c.status = 'approved'
+    FROM dbProj_users u
+    LEFT JOIN dbProj_tutorials t ON u.user_id = t.instructor_id
+    LEFT JOIN dbProj_ratings r ON t.tutorial_id = r.tutorial_id
+    LEFT JOIN dbProj_comments c ON t.tutorial_id = c.tutorial_id AND c.status = 'approved'
     WHERE u.user_id = instructorId
     GROUP BY u.user_id;
     
@@ -373,10 +373,10 @@ BEGIN
         COUNT(DISTINCT r.rating_id) AS rating_count,
         COALESCE(AVG(r.rating), 0) AS average_rating,
         COUNT(DISTINCT c.comment_id) AS comment_count
-    FROM techknow_tutorials t
-    INNER JOIN techknow_categories cat ON t.category_id = cat.category_id
-    LEFT JOIN techknow_ratings r ON t.tutorial_id = r.tutorial_id
-    LEFT JOIN techknow_comments c ON t.tutorial_id = c.comment_id AND c.status = 'approved'
+    FROM dbProj_tutorials t
+    INNER JOIN dbProj_categories cat ON t.category_id = cat.category_id
+    LEFT JOIN dbProj_ratings r ON t.tutorial_id = r.tutorial_id
+    LEFT JOIN dbProj_comments c ON t.tutorial_id = c.tutorial_id AND c.status = 'approved'
     WHERE t.instructor_id = instructorId
     GROUP BY t.tutorial_id
     ORDER BY t.published_at DESC;
@@ -391,7 +391,7 @@ DELIMITER ;
 -- ----------------------------------------------------------------------------
 -- Insert Categories (6 categories)
 -- ----------------------------------------------------------------------------
-INSERT INTO techknow_categories (category_name, description, icon) VALUES
+INSERT INTO dbProj_categories (category_name, description, icon) VALUES
 ('Web Development', 'Learn HTML, CSS, JavaScript and modern web frameworks', 'fa-code'),
 ('Database Management', 'Master SQL, MySQL, MongoDB and database design principles', 'fa-database'),
 ('Programming', 'Python, Java, C++ and programming fundamentals', 'fa-laptop-code'),
@@ -404,7 +404,7 @@ INSERT INTO techknow_categories (category_name, description, icon) VALUES
 -- All passwords are: Password123!
 -- Hashed using bcrypt: $2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi
 -- ----------------------------------------------------------------------------
-INSERT INTO techknow_users (full_name, email, password_hash, role, bio, status) VALUES
+INSERT INTO dbProj_users (full_name, email, password_hash, role, bio, status) VALUES
 ('John Admin', 'admin@techknow.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'System Administrator with 10+ years experience in education technology', 'active'),
 ('Sarah Johnson', 'sarah.j@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'creator', 'Full Stack Developer & Instructor specializing in web technologies. Passionate about making programming accessible to everyone.', 'active'),
 ('Mike Chen', 'mike.chen@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'creator', 'Database Expert and SQL Specialist with industry certifications. Former DBA at Fortune 500 companies.', 'active'),
@@ -415,7 +415,7 @@ INSERT INTO techknow_users (full_name, email, password_hash, role, bio, status) 
 -- ----------------------------------------------------------------------------
 -- Insert Tutorials (15 tutorials)
 -- ----------------------------------------------------------------------------
-INSERT INTO techknow_tutorials (title, slug, short_description, content, thumbnail, video_url, category_id, instructor_id, difficulty, duration_minutes, status, view_count, published_at) VALUES
+INSERT INTO dbProj_tutorials (title, slug, short_description, content, thumbnail, video_url, category_id, instructor_id, difficulty, duration_minutes, status, view_count, published_at) VALUES
 -- Tutorial 1
 ('Complete PHP & MySQL Course for Beginners', 'php-mysql-beginners', 'Learn PHP and MySQL from scratch with hands-on projects and real-world examples', 
 '<h2>Introduction to PHP</h2><p>PHP is a powerful server-side scripting language designed for web development. In this comprehensive course, you will learn everything from basic syntax to advanced database integration.</p><h2>What You Will Learn</h2><ul><li>PHP syntax and fundamentals</li><li>Working with forms and user input</li><li>MySQL database integration</li><li>CRUD operations</li><li>Security best practices</li></ul><h2>Course Content</h2><p>We start with the basics of PHP syntax, variables, and control structures. Then we move into functions, arrays, and object-oriented programming. Finally, we integrate MySQL databases and build a complete web application.</p>', 
@@ -494,7 +494,7 @@ INSERT INTO techknow_tutorials (title, slug, short_description, content, thumbna
 -- ----------------------------------------------------------------------------
 -- Insert Tags (25 tags)
 -- ----------------------------------------------------------------------------
-INSERT INTO techknow_tags (tag_name) VALUES
+INSERT INTO dbProj_tags (tag_name) VALUES
 ('php'), ('mysql'), ('javascript'), ('es6'), ('database'), 
 ('sql'), ('python'), ('data-science'), ('machine-learning'), 
 ('react-native'), ('mobile'), ('aws'), ('cloud'), ('rest-api'), 
@@ -504,7 +504,7 @@ INSERT INTO techknow_tags (tag_name) VALUES
 -- ----------------------------------------------------------------------------
 -- Insert Tutorial Tags (associating tutorials with relevant tags)
 -- ----------------------------------------------------------------------------
-INSERT INTO techknow_tutorial_tags (tutorial_id, tag_id) VALUES
+INSERT INTO dbProj_tutorial_tags (tutorial_id, tag_id) VALUES
 -- Tutorial 1: PHP & MySQL
 (1, 1), (1, 2), (1, 24),
 -- Tutorial 2: JavaScript ES6
@@ -539,7 +539,7 @@ INSERT INTO techknow_tutorial_tags (tutorial_id, tag_id) VALUES
 -- ----------------------------------------------------------------------------
 -- Insert Ratings (realistic distribution across tutorials)
 -- ----------------------------------------------------------------------------
-INSERT INTO techknow_ratings (tutorial_id, user_id, rating) VALUES
+INSERT INTO dbProj_ratings (tutorial_id, user_id, rating) VALUES
 -- Tutorial 1
 (1, 5, 5), (1, 6, 4),
 -- Tutorial 2
@@ -574,7 +574,7 @@ INSERT INTO techknow_ratings (tutorial_id, user_id, rating) VALUES
 -- ----------------------------------------------------------------------------
 -- Insert Comments (engaging, realistic comments)
 -- ----------------------------------------------------------------------------
-INSERT INTO techknow_comments (tutorial_id, user_id, parent_comment_id, comment_text, status) VALUES
+INSERT INTO dbProj_comments (tutorial_id, user_id, parent_comment_id, comment_text, status) VALUES
 -- Tutorial 1
 (1, 5, NULL, 'Excellent tutorial! Very clear explanations for beginners. The examples really helped me understand PHP basics.', 'approved'),
 (1, 6, 1, 'I completely agree! This helped me understand PHP perfectly. Moving on to the MySQL part now.', 'approved'),
@@ -602,7 +602,7 @@ INSERT INTO techknow_comments (tutorial_id, user_id, parent_comment_id, comment_
 -- ----------------------------------------------------------------------------
 -- Insert User Activity (tracking views and completions)
 -- ----------------------------------------------------------------------------
-INSERT INTO techknow_user_activity (user_id, tutorial_id, activity_type) VALUES
+INSERT INTO dbProj_user_activity (user_id, tutorial_id, activity_type) VALUES
 -- David's activity
 (5, 1, 'view'), (5, 1, 'complete'),
 (5, 2, 'view'), (5, 3, 'view'),
@@ -617,7 +617,7 @@ INSERT INTO techknow_user_activity (user_id, tutorial_id, activity_type) VALUES
 -- ----------------------------------------------------------------------------
 -- Insert Tutorial Media (sample media files)
 -- ----------------------------------------------------------------------------
-INSERT INTO techknow_tutorial_media (tutorial_id, media_type, file_name, file_path, file_size) VALUES
+INSERT INTO dbProj_tutorial_media (tutorial_id, media_type, file_name, file_path, file_size) VALUES
 (1, 'image', 'php-syntax-example.png', 'uploads/tutorials/1/php-syntax-example.png', 245),
 (1, 'document', 'php-cheatsheet.pdf', 'uploads/tutorials/1/php-cheatsheet.pdf', 1240),
 (2, 'image', 'es6-features-diagram.png', 'uploads/tutorials/2/es6-features-diagram.png', 312),
@@ -635,23 +635,23 @@ INSERT INTO techknow_tutorial_media (tutorial_id, media_type, file_name, file_pa
 
 -- Check table counts
 SELECT 
-    'users' AS table_name, COUNT(*) AS row_count FROM techknow_users
+    'users' AS table_name, COUNT(*) AS row_count FROM dbProj_users
 UNION ALL
-SELECT 'categories', COUNT(*) FROM techknow_categories
+SELECT 'categories', COUNT(*) FROM dbProj_categories
 UNION ALL
-SELECT 'tutorials', COUNT(*) FROM techknow_tutorials
+SELECT 'tutorials', COUNT(*) FROM dbProj_tutorials
 UNION ALL
-SELECT 'media', COUNT(*) FROM techknow_tutorial_media
+SELECT 'media', COUNT(*) FROM dbProj_tutorial_media
 UNION ALL
-SELECT 'ratings', COUNT(*) FROM techknow_ratings
+SELECT 'ratings', COUNT(*) FROM dbProj_ratings
 UNION ALL
-SELECT 'comments', COUNT(*) FROM techknow_comments
+SELECT 'comments', COUNT(*) FROM dbProj_comments
 UNION ALL
-SELECT 'tags', COUNT(*) FROM techknow_tags
+SELECT 'tags', COUNT(*) FROM dbProj_tags
 UNION ALL
-SELECT 'tutorial_tags', COUNT(*) FROM techknow_tutorial_tags
+SELECT 'tutorial_tags', COUNT(*) FROM dbProj_tutorial_tags
 UNION ALL
-SELECT 'user_activity', COUNT(*) FROM techknow_user_activity;
+SELECT 'user_activity', COUNT(*) FROM dbProj_user_activity;
 
 -- Test stored procedure 1
 CALL GetPopularTutorials('2024-01-01', '2024-12-31', 5);
@@ -661,7 +661,7 @@ CALL GetInstructorReport(2);
 
 -- Test full-text search
 SELECT tutorial_id, title, MATCH(title, content) AGAINST('javascript') AS relevance
-FROM techknow_tutorials
+FROM dbProj_tutorials
 WHERE MATCH(title, content) AGAINST('javascript')
 ORDER BY relevance DESC
 LIMIT 5;
@@ -686,7 +686,7 @@ SELECT
     email AS Email,
     role AS Role,
     'Password123!' AS Password
-FROM techknow_users
+FROM dbProj_users
 ORDER BY 
     CASE role 
         WHEN 'admin' THEN 1 

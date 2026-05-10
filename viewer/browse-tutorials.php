@@ -6,7 +6,6 @@
  */
 
 require_once '../includes/viewer-auth-check.php';
-require_once '../includes/viewer-auth-check.php';
 require_once '../classes/Tutorial.php';
 require_once '../classes/Category.php';
 
@@ -174,7 +173,7 @@ $total_results = $pagination['total_items'];
                                 <span><i class="fas fa-clock"></i> <?= $tutorial['duration_minutes'] ?> min</span>
                             </div>
                             
-                            <a href="tutorial-view.php?id=<?= $tutorial['tutorial_id'] ?>" class="btn btn-block btn-primary">
+                            <a href="tutorial-view.php?slug=<?= urlencode($tutorial['slug']) ?>" class="btn btn-block btn-primary">
                                 View Tutorial <i class="fas fa-arrow-right"></i>
                             </a>
                         </div>
@@ -183,17 +182,37 @@ $total_results = $pagination['total_items'];
                 </div>
                 
                 <!-- pagination -->
+                <?php if ($pagination['total_pages'] > 1): ?>
                 <div class="pagination">
-                    <button class="btn btn-outline" disabled>
-                        <i class="fas fa-chevron-left"></i>
-                        Previous
-                    </button>
-                    <span class="page-info">Page 1 of 1</span>
-                    <button class="btn btn-outline" disabled>
-                        Next
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
+                    <?php
+                    $base_url = '?search=' . urlencode($search)
+                        . '&category=' . $category
+                        . '&difficulty=' . urlencode($difficulty)
+                        . '&sort=' . urlencode($sort);
+                    ?>
+                    <?php if ($page > 1): ?>
+                        <a href="<?= $base_url ?>&page=<?= $page - 1 ?>" class="btn btn-outline">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </a>
+                    <?php else: ?>
+                        <button class="btn btn-outline" disabled>
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </button>
+                    <?php endif; ?>
+
+                    <span class="page-info">Page <?= $page ?> of <?= $pagination['total_pages'] ?></span>
+
+                    <?php if ($page < $pagination['total_pages']): ?>
+                        <a href="<?= $base_url ?>&page=<?= $page + 1 ?>" class="btn btn-outline">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </a>
+                    <?php else: ?>
+                        <button class="btn btn-outline" disabled>
+                            Next <i class="fas fa-chevron-right"></i>
+                        </button>
+                    <?php endif; ?>
                 </div>
+                <?php endif; ?>
             <?php endif; ?>
         </main>
     </div>

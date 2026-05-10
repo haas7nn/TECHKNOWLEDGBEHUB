@@ -20,7 +20,7 @@ $conn = $database->connect();
 
 // Count enrolled/viewed tutorials
 $enrolledQuery = "SELECT COUNT(DISTINCT tutorial_id) as count 
-                  FROM techknow_user_activity 
+                  FROM dbProj_user_activity 
                   WHERE user_id = :user_id";
 $enrolledStmt = $conn->prepare($enrolledQuery);
 $enrolledStmt->bindParam(':user_id', $current_user_id, PDO::PARAM_INT);
@@ -35,8 +35,8 @@ $in_progress_count = $enrolled_count - $completed_count;
 
 // Calculate total learning time (estimated from completed tutorials)
 $timeQuery = "SELECT SUM(t.duration_minutes) as total_time
-              FROM techknow_user_activity ua
-              JOIN techknow_tutorials t ON ua.tutorial_id = t.tutorial_id
+              FROM dbProj_user_activity ua
+              JOIN dbProj_tutorials t ON ua.tutorial_id = t.tutorial_id
               WHERE ua.user_id = :user_id AND ua.activity_type = 'complete'";
 $timeStmt = $conn->prepare($timeQuery);
 $timeStmt->bindParam(':user_id', $current_user_id, PDO::PARAM_INT);
@@ -50,10 +50,10 @@ $continueQuery = "SELECT t.*, c.category_name, u.full_name as instructor_name,
                     WHEN ua.activity_type = 'complete' THEN 100
                     ELSE 50
                   END as progress
-                  FROM techknow_user_activity ua
-                  JOIN techknow_tutorials t ON ua.tutorial_id = t.tutorial_id
-                  JOIN techknow_categories c ON t.category_id = c.category_id
-                  JOIN techknow_users u ON t.instructor_id = u.user_id
+                  FROM dbProj_user_activity ua
+                  JOIN dbProj_tutorials t ON ua.tutorial_id = t.tutorial_id
+                  JOIN dbProj_categories c ON t.category_id = c.category_id
+                  JOIN dbProj_users u ON t.instructor_id = u.user_id
                   WHERE ua.user_id = :user_id
                   ORDER BY ua.activity_date DESC
                   LIMIT 3";
@@ -182,7 +182,7 @@ $recommended_tutorials = $recommended_result['tutorials'];
                                 </div>
                                 <span class="progress-text"><?= $tut['progress'] ?>% complete</span>
                             </div>
-                            <a href="../public/search.php?q=<?= urlencode($tut['title']) ?>" class="btn btn-primary btn-small">
+                            <a href="tutorial-view.php?slug=<?= urlencode($tut['slug']) ?>" class="btn btn-primary btn-small">
                                 Continue <i class="fas fa-arrow-right"></i>
                             </a>
                         </div>
@@ -244,7 +244,7 @@ $recommended_tutorials = $recommended_result['tutorials'];
                                     <span><?= number_format($tut['avg_rating'] ?? 0, 1) ?></span>
                                     <small>(<?= $tut['rating_count'] ?>)</small>
                                 </div>
-                                <a href="../public/search.php?q=<?= urlencode($tut['title']) ?>" class="btn btn-sm btn-primary">
+                                <a href="tutorial-view.php?slug=<?= urlencode($tut['slug']) ?>" class="btn btn-sm btn-primary">
                                     Start Learning
                                 </a>
                             </div>

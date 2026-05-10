@@ -40,9 +40,10 @@ define('MAX_LOGIN_ATTEMPTS', 5);
 // setting the time for bahrain
 date_default_timezone_set('Asia/Bahrain');
 
-// showing errors for now so we can fix them but gotta hide this later lol
+// Error reporting — log errors to file, never display to browser
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
 
 // pull in the database class
 require_once __DIR__ . '/database.php';
