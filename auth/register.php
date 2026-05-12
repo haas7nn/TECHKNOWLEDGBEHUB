@@ -32,6 +32,12 @@ $form_data = [
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
      if (!verifyCsrfFromPost()) {
         $error = 'Invalid security token. Please try again.';
+        // Bug 12 fix: repopulate form data so fields don't go blank
+        $form_data = [
+            'full_name' => clean($_POST['full_name'] ?? ''),
+            'email'     => clean($_POST['email']     ?? ''),
+            'role'      => clean($_POST['role']      ?? 'viewer'),
+        ];
     } else {
     // clean the inputs so we stay safe
     $full_name = clean($_POST['full_name']);
@@ -48,7 +54,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
     
     // check all the fields on the server side
-    if (empty($full_name) || empty($email) || empty($password) || empty($confirm_password)) {
+    // Bug 10 fix: validate terms server-side — HTML5 required can be bypassed
+    if (!isset($_POST['terms'])) {
+        $error = 'You must agree to the Terms & Conditions to register.';
+    } elseif (empty($full_name) || empty($email) || empty($password) || empty($confirm_password)) {
         $error = 'All fields are required';
     } elseif (strlen($full_name) < 3) {
         $error = 'Name must be at least 3 characters';
@@ -68,10 +77,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = $user->register($full_name, $email, $password, $role);
         
         if ($result['success']) {
-            $success = $result['message'];
-            // clear the form since we are good to go
-            $form_data = ['full_name' => '', 'email' => '', 'role' => 'viewer'];
-            // redirect is handled via JS after the success message renders (see bottom of page)
+            // Bug 5 fix: PRG pattern — redirect immediately after success
+            // prevents form resubmission on browser refresh
+            setFlashMessage('Account created successfully! Please login.', 'success');
+            redirect('auth/login.php');
         } else {
             $error = $result['message'];
         }
@@ -189,7 +198,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                         <span class="error-message" id="password-error"></span>
                         <small class="form-hint">
-                            Must be at least 8 characters with uppercase, lowercase, and number
+                            OOPS , Must be at least 8 characters with uppercase, lowercase, and number
                         </small>
                     </div>
                     
@@ -237,7 +246,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <!-- agreement part -->
                     <div class="form-group checkbox-group">
                         <label class="checkbox-label">
-                            <input type="checkbox" id="terms" required>
+                            <input type="checkbox" id="terms" name="terms" required>
                             <span>I agree to the <a href="#" class="link">Terms & Conditions</a> and <a href="#" class="link">Privacy Policy</a></span>
                         </label>
                         <span class="error-message" id="terms-error"></span>
@@ -302,11 +311,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             let text = '';
             let color = '';
             
-            // check for symbols and numbers to see how strong it is
+            // Bug 11 fix: JS checks now match server-side requirements exactly
+            // server requires: 8+ chars, uppercase, lowercase, number
             if (password.length >= 8) strength++;
             if (password.match(/[a-z]/)) strength++;
             if (password.match(/[A-Z]/)) strength++;
             if (password.match(/[0-9]/)) strength++;
+            // bonus point for special chars (not required server-side but encouraged)
             if (password.match(/[^a-zA-Z0-9]/)) strength++;
             
             // choose the color and label based on the strength score

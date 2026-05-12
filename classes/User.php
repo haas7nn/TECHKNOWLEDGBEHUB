@@ -167,12 +167,15 @@ class User {
                     
                     // update last login time
                     $this->updateLastLogin($user['user_id']);
-                    
-                    // initialize sessions
-                    $_SESSION['user_id'] = $user['user_id'];
-                    $_SESSION['full_name'] = $user['full_name'];
-                    $_SESSION['email'] = $user['email'];
-                    $_SESSION['role'] = $user['role'];
+
+                    // Bug 8 fix: regenerate session ID after login to prevent session fixation
+                    session_regenerate_id(true);
+
+                    // save their info to the session so we know who they are
+                    $_SESSION['user_id']       = $user['user_id'];
+                    $_SESSION['full_name']     = $user['full_name'];
+                    $_SESSION['email']         = $user['email'];
+                    $_SESSION['role']          = $user['role'];
                     $_SESSION['last_activity'] = time();
                     
                     return [
@@ -571,23 +574,5 @@ class User {
     }
 }
 
-// test block
-if (basename(__FILE__) == basename($_SERVER['PHP_SELF'])) {
-    echo '<!DOCTYPE html><html><head><title>User Class Test</title>';
-    echo '<style>body{font-family:Arial;padding:20px;background:#f5f5f5;}</style></head><body>';
-    echo '<h2>✅ User Class Test</h2>';
-    
-    try {
-        $user = new User();
-        echo '<p style="color:green;">✓ User class loaded successfully!</p>';
-        
-        $users = $user->getAllUsers();
-        echo '<p>Users found: <strong>' . count($users) . '</strong></p>';
-        
-    } catch (Exception $e) {
-        echo '<p style="color:red;">✗ Error: ' . $e->getMessage() . '</p>';
-    }
-    
-    echo '</body></html>';
-}
+// End of User class
 ?>

@@ -40,7 +40,7 @@ define('MAX_LOGIN_ATTEMPTS', 5);
 // setting the time for bahrain
 date_default_timezone_set('Asia/Bahrain');
 
-// Error reporting — log errors to file, never display to browser
+// turn off error display for security — log them to a file instead
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -161,7 +161,8 @@ function redirect($url) {
     
     // if its just a local path add the full site url
     if (!preg_match('/^https?:\/\//', $url)) {
-        $url = SITE_URL . '/' . $url;
+        // Bug 22 fix: avoid double-slash when url is empty
+        $url = empty($url) ? SITE_URL : SITE_URL . '/' . $url;
     }
     
     header("Location: " . $url);
@@ -203,15 +204,16 @@ function sanitize($data) {
 }
 
 /**
- * quick trim for inputs
+ * quick trim for inputs — strips HTML tags for non-rich-text fields
+ * Bug 33 fix: old version allowed HTML tags through
  * @param string $data
  * @return string
  */
 function clean($data) {
-    return trim(stripslashes($data));
+    return strip_tags(trim(stripslashes($data)));
 }
 
-// ==================== STRING TOOLS ====================
+// string helper functions
 
 /**
  * turn a title into a clean url link

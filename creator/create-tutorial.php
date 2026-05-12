@@ -26,14 +26,16 @@ $tags = $tagsStmt->fetchAll();
 
 // keeping the data here so it doesnt disappear on reload
 $form_data = [
-    'title' => '',
+    'title'             => '',
     'short_description' => '',
-    'content' => '',
-    'category_id' => '',
-    'difficulty' => 'beginner',
-    'duration_minutes' => '',
-    'status' => 'draft'
+    'content'           => '',
+    'category_id'       => '',
+    'difficulty'        => 'beginner',
+    'duration_minutes'  => '',
+    'video_url'         => '',
+    'status'            => 'draft'
 ];
+$selected_tags_repop = [];
 
 // handling the post request
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -56,14 +58,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // keep form values so they don't disappear on error
         $form_data = [
-            'title'            => $title,
-            'short_description'=> $short_description,
-            'content'          => $content,
-            'category_id'      => $category_id,
-            'difficulty'       => $difficulty,
-            'duration_minutes' => $duration_minutes,
-            'status'           => $status,
+            'title'             => $title,
+            'short_description' => $short_description,
+            'content'           => $content,
+            'category_id'       => $category_id,
+            'difficulty'        => $difficulty,
+            'duration_minutes'  => $duration_minutes,
+            'video_url'         => $video_url,   // Bug 3 fix: preserve video_url on error
+            'status'            => $status,
         ];
+        // Bug 27 fix: preserve selected tags so checkboxes stay checked on error
+        $selected_tags_repop = $selected_tags;
 
         // server-side validation
         if (empty($title)) {
@@ -82,28 +87,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Invalid difficulty level.';
         } elseif (!in_array($status, ['draft', 'published'])) {
             $error = 'Invalid status.';
+        // Bug 27 fix: duration must be a positive integer
+        } elseif (!empty($duration_minutes) && $duration_minutes < 1) {
+            $error = 'Duration must be at least 1 minute.';
+        // Bug 26 fix: validate video URL is YouTube or Vimeo embed
+        } elseif (!empty($video_url) && !preg_match('/^https:\/\/(www\.)?(youtube\.com\/embed\/|youtu\.be\/|player\.vimeo\.com\/video\/)/', $video_url)) {
+            $error = 'Video URL must be a valid YouTube or Vimeo embed URL (e.g. https://www.youtube.com/embed/VIDEO_ID).';
         } else {
             $tutorialObj = new Tutorial();
             $result = $tutorialObj->create([
-                'title'            => $title,
-                'short_description'=> $short_description,
-                'content'          => $content,
-                'category_id'      => $category_id,
-                'instructor_id'    => $current_user_id,
-                'difficulty'       => $difficulty,
-                'duration_minutes' => $duration_minutes,
-                'video_url'        => $video_url,
-                'status'           => $status,
-                'tags'             => $selected_tags,
+                'title'             => $title,
+                'short_description' => $short_description,
+                'content'           => $content,
+                'category_id'       => $category_id,
+                'instructor_id'     => $current_user_id,
+                'difficulty'        => $difficulty,
+                'duration_minutes'  => $duration_minutes,
+                'video_url'         => $video_url,
+                'status'            => $status,
+                'tags'              => $selected_tags,
             ]);
 
-            // handle thumbnail upload if one was provided
+            // upload thumbnail if one was attached
             if ($result['success'] && !empty($_FILES['thumbnail']['name'])) {
-                $tutorialObj->uploadMedia($result['tutorial_id'], $_FILES['thumbnail'], 'image');
+                // Bug 5 fix: check the return value so we know if the upload failed
+                $thumb_result = $tutorialObj->uploadMedia($result['tutorial_id'], $_FILES['thumbnail'], 'image');
+                if (!$thumb_result['success']) {
+                    // tutorial saved OK but thumbnail didn't upload — warn them
+                    setFlashMessage('Tutorial saved but thumbnail upload failed: ' . $thumb_result['message'], 'warning');
+                }
             }
 
-            // handle additional files
+            // upload any extra files they attached
             if ($result['success'] && !empty($_FILES['additional_files']['name'][0])) {
+                $upload_errors = [];
                 foreach ($_FILES['additional_files']['tmp_name'] as $key => $tmp) {
                     if ($_FILES['additional_files']['error'][$key] === UPLOAD_ERR_OK) {
                         $single = [
@@ -113,8 +130,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             'error'    => $_FILES['additional_files']['error'][$key],
                             'size'     => $_FILES['additional_files']['size'][$key],
                         ];
-                        $tutorialObj->uploadMedia($result['tutorial_id'], $single, 'document');
+                        // Bug 5 fix: track any upload failures
+                        $file_result = $tutorialObj->uploadMedia($result['tutorial_id'], $single, 'document');
+                        if (!$file_result['success']) {
+                            $upload_errors[] = $_FILES['additional_files']['name'][$key];
+                        }
                     }
+                }
+                if (!empty($upload_errors)) {
+                    setFlashMessage('Tutorial saved but these files failed to upload: ' . implode(', ', $upload_errors), 'warning');
                 }
             }
 
@@ -167,14 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?= e($error) ?>
                 </div>
             <?php endif; ?>
-            
-            <?php if ($success): ?>
-                <div class="alert alert-success">
-                    <i class="fas fa-check-circle"></i>
-                    <?= e($success) ?>
-                </div>
-            <?php endif; ?>
-            
+
             <!-- main tutorial form starts here -->
             <form method="POST" action="" enctype="multipart/form-data" class="tutorial-form" id="createTutorialForm">
                     <?php csrfField(); ?>
@@ -383,6 +400,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         type="checkbox" 
                                         name="tags[]" 
                                         value="<?= $tag['tag_id'] ?>"
+                                        <?= in_array($tag['tag_id'], $selected_tags_repop) ? 'checked' : '' ?>
                                     >
                                     <span class="tag-label"><?= e($tag['tag_name']) ?></span>
                                 </label>

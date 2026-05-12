@@ -1,6 +1,6 @@
 <?php
 /**
- * Creator Dashboard
+ * Creator Dashboard - REAL DATA VERSION
  * Shows actual statistics from database
  * Hasan Fardan - 202301686
  */
@@ -224,22 +224,77 @@ $recent_tutorials = array_slice($my_tutorials, 0, 5);
                 <?php endif; ?>
             </div>
             
-            <!-- Performance Chart Placeholder -->
+            <!-- Bug 35 fix: real performance chart using Chart.js -->
             <div class="chart-section">
                 <h2><i class="fas fa-chart-line"></i> Performance Overview</h2>
-                <div class="chart-placeholder">
-                    <div style="text-align: center; padding: 40px; color: #999;">
-                        <i class="fas fa-chart-area" style="font-size: 60px; margin-bottom: 20px;"></i>
-                        <p><strong>Total Views Trend:</strong> <?= number_format($total_views) ?></p>
-                        <p><strong>Avg Rating:</strong> <?= number_format($avg_rating, 2) ?>/5.0</p>
-                        <p><strong>Total Engagement:</strong> <?= $total_ratings_count ?> ratings</p>
-                        <small>Advanced analytics coming soon</small>
-                    </div>
+                <div style="background:#fff;border-radius:14px;padding:24px;box-shadow:0 2px 10px rgba(0,0,0,.06);">
+                    <?php if (empty($my_tutorials)): ?>
+                        <div style="text-align:center;padding:40px;color:#a0aec0;">
+                            <i class="fas fa-chart-area" style="font-size:48px;margin-bottom:12px;display:block;"></i>
+                            <p>No tutorials yet. Create your first to see performance data.</p>
+                        </div>
+                    <?php else: ?>
+                        <canvas id="perfChart" height="120"></canvas>
+                    <?php endif; ?>
                 </div>
             </div>
         </main>
     </div>
-    
+
+    <?php if (!empty($my_tutorials)): ?>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+    (function() {
+        const labels  = <?= json_encode(array_map(
+            fn($t) => strlen($t['title']) > 22 ? substr($t['title'], 0, 22) . '…' : $t['title'],
+            $my_tutorials
+        )) ?>;
+        const views   = <?= json_encode(array_column($my_tutorials, 'view_count')) ?>;
+        const ratings = <?= json_encode(array_map(fn($t) => round((float)$t['avg_rating'], 2), $my_tutorials)) ?>;
+
+        new Chart(document.getElementById('perfChart'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Views',
+                        data: views,
+                        backgroundColor: 'rgba(102,126,234,0.7)',
+                        borderColor: '#667eea',
+                        borderWidth: 1,
+                        yAxisID: 'yViews'
+                    },
+                    {
+                        label: 'Avg Rating',
+                        data: ratings,
+                        type: 'line',
+                        borderColor: '#f6ad55',
+                        backgroundColor: 'rgba(246,173,85,0.15)',
+                        borderWidth: 2,
+                        pointRadius: 5,
+                        tension: 0.3,
+                        yAxisID: 'yRating'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y } }
+                },
+                scales: {
+                    yViews:  { type: 'linear', position: 'left',  beginAtZero: true, title: { display: true, text: 'Views' } },
+                    yRating: { type: 'linear', position: 'right', beginAtZero: true, max: 5, title: { display: true, text: 'Rating (0–5)' }, grid: { drawOnChartArea: false } }
+                }
+            }
+        });
+    })();
+    </script>
+    <?php endif; ?>
+
     <script src="<?= asset('js/creator.js') ?>"></script>
 </body>
 </html>

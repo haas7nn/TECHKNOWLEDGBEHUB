@@ -127,35 +127,6 @@ class Database {
     }
 }
 
-// this part runs if you open the file directly to test it
-if (basename(__FILE__) == basename($_SERVER['PHP_SELF'])) {
-    echo '<!DOCTYPE html>
-    <html>
-    <head>
-        <title>Database Connection Test</title>
-        <style>
-            body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
-            .success-box { 
-                background: #d4edda; 
-                border-left: 4px solid #28a745; 
-                padding: 20px; 
-                border-radius: 5px; 
-                max-width: 600px; 
-                margin: 50px auto;
-            }
-            h2 { color: #28a745; margin-top: 0; }
-        </style>
-    </head>
-    <body>
-        <div class="success-box">
-            <h2> Database Connection Test !!</h2>';
-    
-    $database = new Database();
-    if ($database->connect()) {
-        echo '<p><strong>Status:</strong> Connection Successful!</p>';
-        echo '<p>Database is ready to use, NOW You can now build your application</p>';
-    }
-    
-    echo '</div></body></html>';
-}
+
+// removed test block — it leaked server info if someone opened the file directly
 ?>

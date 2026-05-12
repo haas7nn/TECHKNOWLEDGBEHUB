@@ -114,7 +114,13 @@ $pagination = $search_results['pagination'];
                     <?php foreach ($tutorials as $tut): ?>
                         <div class="tutorial-card">
                             <div class="card-image">
-                                <img src="<?= $tut['thumbnail'] ?>" alt="<?= e($tut['title']) ?>">
+                                <?php if (!empty($tut['thumbnail'])): ?>
+                                    <img src="<?= SITE_URL ?>/uploads/<?= e($tut['thumbnail']) ?>" alt="<?= e($tut['title']) ?>">
+                                <?php else: ?>
+                                    <div style="height:180px;background:#e8ecf1;display:flex;align-items:center;justify-content:center;">
+                                        <i class="fas fa-book" style="font-size:48px;color:#aaa;"></i>
+                                    </div>
+                                <?php endif; ?>
                                 <span class="difficulty-badge difficulty-<?= $tut['difficulty'] ?>">
                                     <?= ucfirst($tut['difficulty']) ?>
                                 </span>
@@ -129,7 +135,7 @@ $pagination = $search_results['pagination'];
                                     <span><i class="fas fa-star"></i> <?= number_format($tut['avg_rating'], 1) ?></span>
                                 </div>
                                 
-                                <a href="tutorial.php?slug=<?= $tut['slug'] ?>" class="btn btn-block">
+                                <a href="<?= SITE_URL ?>/viewer/tutorial-view.php?slug=<?= urlencode($tut['slug']) ?>" class="btn btn-block">
                                     View Tutorial
                                 </a>
                             </div>

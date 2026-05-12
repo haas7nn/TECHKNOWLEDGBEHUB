@@ -1,15 +1,13 @@
 <?php
-/**
- * Logout - kills the session and sends user to login page
- * Hasan Fardan - 202301686
- */
-
 require_once '../config/config.php';
 
-// clear the remember me cookie if it exists
+// Bug 34 fix: use consistent past timestamp for all cookie clearing
+$past = time() - 86400;
+
+// clear remember-me cookie
 if (isset($_COOKIE['remember_user'])) {
     setcookie('remember_user', '', [
-        'expires'  => time() - 3600,
+        'expires'  => $past,
         'path'     => '/',
         'secure'   => true,
         'httponly' => true,
@@ -17,26 +15,30 @@ if (isset($_COOKIE['remember_user'])) {
     ]);
 }
 
-// wipe the session data
-$_SESSION = [];
-
-// destroy the session cookie
+// clear session cookie using the same params PHP configured it with
 if (ini_get('session.use_cookies')) {
     $params = session_get_cookie_params();
-    setcookie(session_name(), '', time() - 42000,
-        $params['path'], $params['domain'],
-        $params['secure'], $params['httponly']
-    );
+    // Bug 26 fix: use samesite from actual session config, fall back to Strict
+    $samesite = !empty($params['samesite']) ? $params['samesite'] : 'Strict';
+    setcookie(session_name(), '', [
+        'expires'  => $past,
+        'path'     => $params['path']   ?: '/',
+        'domain'   => $params['domain'] ?: '',
+        'secure'   => $params['secure'],
+        'httponly' => $params['httponly'],
+        'samesite' => $samesite
+    ]);
 }
 
+// wipe session data and destroy
+$_SESSION = [];
 session_destroy();
 
-// start a fresh session just to carry the flash message
+// Bug 21 fix: start a fresh session AFTER destroy to carry the flash message
 session_start();
 $_SESSION['flash_message'] = 'You have been logged out successfully.';
 $_SESSION['flash_type']    = 'success';
 
-// redirect to login, not index (index doesn't exist)
 header('Location: ' . SITE_URL . '/auth/login.php');
 exit();
 ?>

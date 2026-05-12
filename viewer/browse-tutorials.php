@@ -1,61 +1,59 @@
 <?php
-/**
- * Browse Tutorials Page
- * search and filter through all available tutorials
- * Hasan Fardan - 202301686
- */
+// browse tutorials page — lets students filter and search all published tutorials
+// Hasan Fardan - 202301686
 
-// First, let's make sure the user is actually logged in and allowed to be here
 require_once '../includes/viewer-auth-check.php';
-
-// Pull in our Tutorial and Category classes so we can talk to the database
 require_once '../classes/Tutorial.php';
 require_once '../classes/Category.php';
 
-// Set the page title — this shows up in the browser tab
-$page_title = 'Browse Tutorials';
+$page_title  = 'Browse Tutorials';
+$css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
 
-// === GRAB ALL THE FILTERS FROM THE URL ===
-// Check if the user typed anything in the search box
-$search = isset($_GET['search']) ? clean($_GET['search']) : '';
+// grab the filters from the URL
+$search     = isset($_GET['search'])   ? clean($_GET['search'])     : '';
+$difficulty = isset($_GET['difficulty'])? clean($_GET['difficulty']) : '';
+$sort       = isset($_GET['sort'])     ? clean($_GET['sort'])       : 'newest';
+$page       = isset($_GET['page'])     ? max(1, (int)$_GET['page']) : 1;
 
-// See if they picked a specific category from the dropdown
+// category needs to be an int — 0 means "all categories"
 $category = isset($_GET['category']) ? (int)$_GET['category'] : 0;
 
-// Check if they selected a difficulty level (beginner, intermediate, advanced)
-$difficulty = isset($_GET['difficulty']) ? clean($_GET['difficulty']) : '';
-
-// Figure out how they want to sort the results (default is newest first)
-$sort = isset($_GET['sort']) ? clean($_GET['sort']) : 'newest';
-
-// Get the current page number for pagination (default to page 1, never go below 1)
-$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
-
-// === LOAD THE CATEGORY DROPDOWN OPTIONS ===
-// Create a Category object and fetch all categories so the user can filter by them
+// pull all categories for the filter dropdown
 $categoryObj = new Category();
-$categories = $categoryObj->getAll();
+$categories  = $categoryObj->getAll();
 
-// === BUILD OUR FILTER ARRAY FOR THE DATABASE QUERY ===
-// Start with an empty array and only add filters if the user actually set them
-$filters = [];
-if (!empty($search)) $filters['search'] = $search;           // they searched for something
-if (!empty($category)) $filters['category_id'] = $category;  // they picked a category
-if (!empty($difficulty)) $filters['difficulty'] = $difficulty; // they picked a difficulty
-if (!empty($sort)) $filters['sort'] = $sort;                   // they chose a sort order
+// build the filters array — only pass category if they actually picked one
+// bug fix: category 0 means all, so skip it
+$filters = ['sort' => $sort];
+if (!empty($search))     $filters['search']      = $search;
+if ($category > 0)       $filters['category_id'] = $category;
+if (!empty($difficulty)) $filters['difficulty']  = $difficulty;
 
-// === FETCH THE TUTORIALS ===
-// If no filters are applied and we're sorting by newest, use the simple getPublished method
-// Otherwise, use the search method to apply all the filters
-$tutorial = new Tutorial();
-$result = empty($filters) && $sort === 'newest' 
-    ? $tutorial->getPublished($page, 12)   // simple fetch, 12 per page
-    : $tutorial->search($filters, $page, 12);  // filtered search, 12 per page
+// actually go get the tutorials from the database
+$tutorialObj    = new Tutorial();
+$result         = $tutorialObj->search($filters, $page, 12);
 
-// Pull out the results so we can use them in the HTML below
-$tutorials = $result['tutorials'];
-$pagination = $result['pagination'];
-$total_results = $pagination['total_items'];
+// pull out what we need — with safe fallbacks so nothing crashes
+// bug fix: $total_results was missing before
+$tutorials      = $result['tutorials']              ?? [];
+$pagination     = $result['pagination']             ?? [];
+$total_results  = $pagination['total_items']        ?? 0;
+
+// load the user's favorited tutorial IDs so heart icons show the right state on load
+$user_favorites = [];
+$db   = new Database();
+$conn = $db->connect();
+if ($conn) {
+    $favStmt = $conn->prepare(
+        "SELECT tutorial_id FROM dbProj_user_activity
+         WHERE user_id = :uid AND activity_type = 'favorite'"
+    );
+    $favStmt->bindParam(':uid', $current_user_id, PDO::PARAM_INT);
+    $favStmt->execute();
+    foreach ($favStmt->fetchAll() as $row) {
+        $user_favorites[] = $row['tutorial_id'];
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -63,191 +61,194 @@ $total_results = $pagination['total_items'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $page_title ?> - <?= SITE_NAME ?></title>
-    
-    <!-- Our custom viewer styles -->
-    <link rel="stylesheet" href="<?= asset('css/viewer.css') ?>?v=<?= filemtime(__DIR__ . '/../assets/css/viewer.css') ?>">
-    
-    <!-- Font Awesome for all those nice icons -->
+    <link rel="stylesheet" href="<?= asset('css/viewer.css') ?>?v=<?= $css_version ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <!-- Top navigation bar -->
     <?php include '../includes/viewer-nav.php'; ?>
-    
+
     <div class="viewer-container">
-        <!-- Side menu with links -->
         <?php include '../includes/viewer-sidebar.php'; ?>
-        
-        <!-- Main content area -->
+
         <main class="viewer-main">
-            <!-- Page header with title and description -->
+
+            <!-- page heading -->
             <div class="browse-header">
-                <div>
-                    <h1><i class="fas fa-th"></i> Browse Tutorials</h1>
-                    <p>Discover thousands of tutorials to master new skills</p>
-                </div>
+                <h1><i class="fas fa-th-large"></i> Browse Tutorials</h1>
+                <p>Discover thousands of tutorials to master new skills</p>
             </div>
-            
-            <!-- === SEARCH AND FILTERS BAR === -->
+
+            <?php displayFlashMessage(); ?>
+
+            <!-- filter bar -->
             <div class="browse-filters">
                 <form method="GET" action="" class="filters-form">
-                    <!-- Big search input -->
+                    <!-- text search box -->
                     <div class="search-box-large">
                         <i class="fas fa-search"></i>
-                        <input 
-                            type="text" 
-                            name="search" 
-                            placeholder="Search for tutorials..." 
-                            value="<?= e($search) ?>"
-                        >
+                        <input type="text" name="search"
+                               placeholder="Search tutorials..."
+                               value="<?= e($search) ?>">
                     </div>
-                    
-                    <!-- Category dropdown -->
+
+                    <!-- category dropdown -->
                     <div class="filter-group">
                         <select name="category" class="filter-select">
-                            <option value="">All Categories</option>
+                            <option value="0">All Categories</option>
                             <?php foreach ($categories as $cat): ?>
-                                <option value="<?= $cat['category_id'] ?>" <?= $category == $cat['category_id'] ? 'selected' : '' ?>>
+                                <option value="<?= $cat['category_id'] ?>"
+                                        <?= $category === (int)$cat['category_id'] ? 'selected' : '' ?>>
                                     <?= e($cat['category_name']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    
-                    <!-- Difficulty level dropdown -->
+
+                    <!-- difficulty dropdown -->
                     <div class="filter-group">
                         <select name="difficulty" class="filter-select">
                             <option value="">All Levels</option>
-                            <option value="beginner" <?= $difficulty === 'beginner' ? 'selected' : '' ?>>Beginner</option>
-                            <option value="intermediate" <?= $difficulty === 'intermediate' ? 'selected' : '' ?>>Intermediate</option>
-                            <option value="advanced" <?= $difficulty === 'advanced' ? 'selected' : '' ?>>Advanced</option>
+                            <?php foreach (['beginner' => 'Beginner', 'intermediate' => 'Intermediate', 'advanced' => 'Advanced'] as $val => $label): ?>
+                                <option value="<?= $val ?>" <?= $difficulty === $val ? 'selected' : '' ?>>
+                                    <?= $label ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
-                    
-                    <!-- Sort order dropdown -->
+
+                    <!-- sort dropdown -->
                     <div class="filter-group">
                         <select name="sort" class="filter-select">
-                            <option value="newest" <?= $sort === 'newest' ? 'selected' : '' ?>>Newest First</option>
-                            <option value="popular" <?= $sort === 'popular' ? 'selected' : '' ?>>Most Popular</option>
-                            <option value="rating" <?= $sort === 'rating' ? 'selected' : '' ?>>Highest Rated</option>
-                            <option value="title" <?= $sort === 'title' ? 'selected' : '' ?>>Title A-Z</option>
+                            <option value="newest"   <?= $sort==='newest'   ?'selected':'' ?>>Newest First</option>
+                            <option value="popular"  <?= $sort==='popular'  ?'selected':'' ?>>Most Popular</option>
+                            <option value="rating"   <?= $sort==='rating'   ?'selected':'' ?>>Highest Rated</option>
+                            <option value="title"    <?= $sort==='title'    ?'selected':'' ?>>Title A-Z</option>
+                            <option value="relevant" <?= $sort==='relevant' ?'selected':'' ?>>Most Relevant</option>
                         </select>
                     </div>
-                    
-                    <!-- Apply button -->
+
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-filter"></i>
-                        Apply Filters
+                        <i class="fas fa-filter"></i> Apply Filters
                     </button>
                 </form>
             </div>
-            
-            <!-- === SHOW HOW MANY RESULTS WE FOUND === -->
+
+            <!-- results info -->
             <div class="results-info">
-                <p>
-                    <?php if ($total_results > 0): ?>
-                        Showing <strong><?= $total_results ?></strong> tutorial<?= $total_results !== 1 ? 's' : '' ?>
-                    <?php else: ?>
-                        No tutorials found
-                    <?php endif; ?>
-                </p>
+                <?php if (!empty($search) || $category > 0 || !empty($difficulty)): ?>
+                    <strong><?= number_format($total_results) ?></strong> tutorial<?= $total_results !== 1 ? 's' : '' ?> found
+                    — <a href="browse-tutorials.php">Clear Filters</a>
+                <?php else: ?>
+                    Showing <strong><?= number_format($total_results) ?></strong> tutorial<?= $total_results !== 1 ? 's' : '' ?>
+                <?php endif; ?>
             </div>
-            
-            <!-- === TUTORIALS GRID === -->
+
+            <!-- tutorial cards grid -->
             <?php if (empty($tutorials)): ?>
-                <!-- Nothing found — show a friendly empty state -->
-                <div class="empty-state-large">
+                <div class="empty-state">
                     <i class="fas fa-search"></i>
-                    <h2>No tutorials found</h2>
+                    <h3>No tutorials found</h3>
                     <p>Try adjusting your filters or search terms</p>
                     <a href="browse-tutorials.php" class="btn btn-primary">
-                        <i class="fas fa-redo"></i>
-                        Clear Filters
+                        <i class="fas fa-times"></i> Clear Filters
                     </a>
                 </div>
             <?php else: ?>
-                <!-- We got results! Loop through and display each tutorial card -->
                 <div class="tutorials-grid-large">
                     <?php foreach ($tutorials as $tutorial): ?>
                     <div class="tutorial-card-browse">
+
+                        <!-- thumbnail with difficulty badge and favorite button -->
                         <div class="card-image">
-                            <!-- Show the thumbnail if we have one, otherwise show a placeholder book icon -->
                             <?php if (!empty($tutorial['thumbnail'])): ?>
-                                <img src="<?= SITE_URL ?>/uploads/<?= e($tutorial['thumbnail']) ?>" alt="<?= e($tutorial['title']) ?>">
+                                <img src="<?= SITE_URL ?>/uploads/<?= e($tutorial['thumbnail']) ?>"
+                                     alt="<?= e($tutorial['title']) ?>"
+                                     onerror="this.style.display='none'">
                             <?php else: ?>
-                                <div style="width:100%;height:200px;background:#e8ecf1;display:flex;align-items:center;justify-content:center;">
+                                <div style="height:200px;background:#e8ecf1;display:flex;align-items:center;justify-content:center;">
                                     <i class="fas fa-book" style="font-size:48px;color:#aaa;"></i>
                                 </div>
                             <?php endif; ?>
-                            
-                            <!-- Difficulty badge (Beginner / Intermediate / Advanced) -->
-                            <span class="difficulty-badge difficulty-<?= $tutorial['difficulty'] ?>">
+
+                            <span class="difficulty-badge difficulty-<?= e($tutorial['difficulty']) ?>">
                                 <?= ucfirst($tutorial['difficulty']) ?>
                             </span>
-                            
-                            <!-- Heart button to favorite this tutorial -->
-                            <button class="favorite-btn" onclick="toggleFavorite(<?= $tutorial['tutorial_id'] ?>)">
-                                <i class="far fa-heart"></i>
+
+                            <!-- heart button — filled if already in favorites -->
+                            <?php $already_fav = in_array($tutorial['tutorial_id'], $user_favorites); ?>
+                            <button class="favorite-btn"
+                                    onclick="toggleFavorite(<?= $tutorial['tutorial_id'] ?>, this)"
+                                    title="<?= $already_fav ? 'Remove from favorites' : 'Add to favorites' ?>">
+                                <i class="<?= $already_fav ? 'fas' : 'far' ?> fa-heart"
+                                   style="color:<?= $already_fav ? '#e53e3e' : 'inherit' ?>;"></i>
                             </button>
                         </div>
-                        
+
+                        <!-- card text content -->
                         <div class="card-content">
-                            <!-- Category tag -->
                             <div class="card-tags">
                                 <span class="tag">
                                     <i class="fas fa-folder"></i>
                                     <?= e($tutorial['category_name']) ?>
                                 </span>
                             </div>
-                            
-                            <!-- Tutorial title and short description -->
+
                             <h3><?= e($tutorial['title']) ?></h3>
-                            <p class="description"><?= truncate($tutorial['short_description'], 120) ?></p>
-                            
-                            <!-- Instructor info: avatar + name -->
+                            <p class="description"><?= e($tutorial['short_description']) ?></p>
+
+                            <!-- instructor row -->
                             <div class="instructor-info">
                                 <?php if (!empty($tutorial['instructor_avatar'])): ?>
-                                    <img src="<?= SITE_URL ?>/uploads/<?= e($tutorial['instructor_avatar']) ?>" alt="Instructor"
+                                    <img src="<?= SITE_URL ?>/uploads/<?= e($tutorial['instructor_avatar']) ?>"
+                                         alt="Instructor"
                                          onerror="this.style.display='none'">
                                 <?php else: ?>
                                     <i class="fas fa-user-circle" style="font-size:26px;color:#cbd5e0;"></i>
                                 <?php endif; ?>
                                 <span><?= e($tutorial['instructor_name']) ?></span>
                             </div>
-                            
-                            <!-- Stats row: rating, views, duration -->
+
+                            <!-- rating / views / duration -->
                             <div class="card-stats">
                                 <span class="rating">
-                                    <i class="fas fa-star"></i>
-                                    <?= number_format($tutorial['avg_rating'], 1) ?>
-                                    <small>(<?= $tutorial['rating_count'] ?>)</small>
+                                    <i class="fas fa-star" style="color:#ffc107;"></i>
+                                    <?= number_format((float)($tutorial['avg_rating'] ?? 0), 1) ?>
+                                    <small>(<?= (int)($tutorial['rating_count'] ?? 0) ?>)</small>
                                 </span>
-                                <span><i class="fas fa-eye"></i> <?= number_format($tutorial['view_count']) ?></span>
-                                <span><i class="fas fa-clock"></i> <?= $tutorial['duration_minutes'] ?> min</span>
+                                <span>
+                                    <i class="fas fa-eye"></i>
+                                    <?= number_format($tutorial['view_count']) ?>
+                                </span>
+                                <?php if (!empty($tutorial['duration_minutes'])): ?>
+                                <span>
+                                    <i class="fas fa-clock"></i>
+                                    <?= $tutorial['duration_minutes'] ?> min
+                                </span>
+                                <?php endif; ?>
                             </div>
-                            
-                            <!-- Big "View Tutorial" button -->
-                            <a href="tutorial-view.php?slug=<?= urlencode($tutorial['slug']) ?>" class="btn btn-block btn-primary">
-                                View Tutorial <i class="fas fa-arrow-right"></i>
+
+                            <!-- view tutorial button -->
+                            <a href="<?= SITE_URL ?>/viewer/tutorial-view.php?slug=<?= urlencode($tutorial['slug']) ?>"
+                               class="btn btn-primary btn-block">
+                                <i class="fas fa-play-circle"></i> View Tutorial
                             </a>
                         </div>
                     </div>
                     <?php endforeach; ?>
                 </div>
-                
-                <!-- === PAGINATION === -->
-                <!-- Only show pagination if there's more than one page -->
-                <?php if ($pagination['total_pages'] > 1): ?>
+
+                <!-- pagination — only shows when there are multiple pages -->
+                <?php if (!empty($pagination['total_pages']) && $pagination['total_pages'] > 1): ?>
+                <?php
+                // preserve all current filters in pagination links
+                $base_url = '?' . http_build_query([
+                    'search'     => $search,
+                    'category'   => $category,
+                    'difficulty' => $difficulty,
+                    'sort'       => $sort,
+                ]);
+                ?>
                 <div class="pagination">
-                    <?php
-                    // Build the base URL with all current filters so pagination keeps them
-                    $base_url = '?search=' . urlencode($search)
-                        . '&category=' . $category
-                        . '&difficulty=' . urlencode($difficulty)
-                        . '&sort=' . urlencode($sort);
-                    ?>
-                    
-                    <!-- Previous page button (disabled if we're on page 1) -->
                     <?php if ($page > 1): ?>
                         <a href="<?= $base_url ?>&page=<?= $page - 1 ?>" class="btn btn-outline">
                             <i class="fas fa-chevron-left"></i> Previous
@@ -258,10 +259,8 @@ $total_results = $pagination['total_items'];
                         </button>
                     <?php endif; ?>
 
-                    <!-- Page counter -->
                     <span class="page-info">Page <?= $page ?> of <?= $pagination['total_pages'] ?></span>
 
-                    <!-- Next page button (disabled if we're on the last page) -->
                     <?php if ($page < $pagination['total_pages']): ?>
                         <a href="<?= $base_url ?>&page=<?= $page + 1 ?>" class="btn btn-outline">
                             Next <i class="fas fa-chevron-right"></i>
@@ -273,16 +272,45 @@ $total_results = $pagination['total_items'];
                     <?php endif; ?>
                 </div>
                 <?php endif; ?>
+
             <?php endif; ?>
+
         </main>
     </div>
-    
+
     <script>
-        // Toggle favorite status for a tutorial
-        // NOTE: This is just a placeholder for now — will hook it up to AJAX later
-        function toggleFavorite(tutorialId) {
-            alert('Favorite feature will be implemented with Tutorial class');
-        }
+    // toggles the favorite state for a tutorial card
+    // sends an AJAX request and updates the heart icon on success
+    function toggleFavorite(tutorialId, btn) {
+        fetch('<?= SITE_URL ?>/api/toggle-favorite.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tutorial_id: tutorialId,
+                csrf_token: '<?= generateCSRFToken() ?>'
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const icon = btn.querySelector('i');
+                if (data.favorited) {
+                    icon.className = 'fas fa-heart';
+                    icon.style.color = '#e53e3e';
+                    btn.title = 'Remove from favorites';
+                } else {
+                    icon.className = 'far fa-heart';
+                    icon.style.color = 'inherit';
+                    btn.title = 'Add to favorites';
+                }
+            } else if (data.redirect) {
+                window.location.href = data.redirect;
+            } else {
+                alert(data.message || 'Could not update favorite.');
+            }
+        })
+        .catch(() => alert('Network error. Please try again.'));
+    }
     </script>
 </body>
 </html>

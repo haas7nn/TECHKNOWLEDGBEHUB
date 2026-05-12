@@ -1,6 +1,6 @@
 <?php
 /**
- * My Tutorials Page
+ * My Tutorials Page - REAL DATA VERSION
  * Shows instructor's actual tutorials from database
  * Hasan Fardan - 202301686
  */
@@ -179,10 +179,16 @@ usort($my_tutorials, function($a, $b) use ($sort) {
         }
         
         function deleteTutorial(id, title) {
-            if (confirm('Are you sure you want to delete "' + title + '"?\n\nThis will archive the tutorial (soft delete).')) {
-                // In a real implementation, you'd use AJAX here
-                window.location.href = 'delete-tutorial.php?id=' + id;
-            }
+            if (!confirm('Archive "' + title + '"?\nIt will be removed from public view.')) return;
+            // Bug 15+19 fix: POST form with CSRF — no more GET-based deletion
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '<?= SITE_URL ?>/creator/delete-tutorial.php';
+            form.innerHTML =
+                '<input type="hidden" name="tutorial_id" value="' + id + '">' +
+                '<input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">';
+            document.body.appendChild(form);
+            form.submit();
         }
     </script>
 </body>

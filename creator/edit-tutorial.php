@@ -1,6 +1,7 @@
 <?php
 /**
- * Edit Tutorial Page 
+ * Edit Tutorial Page - FULL WORKING VERSION
+ * Edit existing tutorials with real database updates
  * Hasan Fardan - 202301686
  */
 
@@ -57,6 +58,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verifyCsrfFromPost()) {
         $error = 'Invalid security token. Please refresh the page and try again.';
     } else {
+    // Bug 14 fix: re-verify ownership on POST — CSRF could bypass GET check
+    if ($tutorial['instructor_id'] != $current_user_id && !isAdmin()) {
+        setFlashMessage('Permission denied.', 'error');
+        redirect('creator/my-tutorials.php');
+    }
     $update_data = [
         'title' => clean($_POST['title']),
         'short_description' => clean($_POST['short_description']),

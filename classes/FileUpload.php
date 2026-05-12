@@ -61,6 +61,13 @@ class FileUpload {
     }
     
     /**
+     * Public wrapper for uploadFile — used by Tutorial::uploadMedia for videos
+     */
+    public function uploadFile_public($file, $type, $directory, $prefix = '') {
+        return $this->uploadFile($file, $type, $directory, $prefix);
+    }
+
+    /**
      * Upload thumbnail image
      * @param array<string, mixed> $file The $_FILES array element
      * @param string $prefix Filename prefix
@@ -203,22 +210,33 @@ class FileUpload {
  * @return bool
  */
 public function deleteFile($filepath) {
-    // Prevent path traversal
-    if (strpos($filepath, '..') !== false || strpos($filepath, './') !== false) {
+    // Bug 6 fix: block null bytes, absolute paths, and traversal sequences
+    if (
+        strpos($filepath, "\0") !== false ||   // null byte
+        strpos($filepath, '..') !== false ||   // traversal
+        strpos($filepath, './') !== false ||   // relative traversal
+        preg_match('/^\/|^[A-Za-z]:\\\\/', $filepath) // absolute path (Unix or Windows)
+    ) {
         return false;
     }
-    
+
     $full_path = realpath($this->upload_base_path . $filepath);
-    
-    // Ensure file is within upload directory
-    if ($full_path === false || strpos($full_path, realpath($this->upload_base_path)) !== 0) {
+
+    // realpath returns false if path doesn't exist — treat as safe failure
+    if ($full_path === false) {
         return false;
     }
-    
+
+    // ensure resolved path is strictly inside the upload directory
+    $upload_real = realpath($this->upload_base_path);
+    if ($upload_real === false || strpos($full_path, $upload_real . DIRECTORY_SEPARATOR) !== 0) {
+        return false;
+    }
+
     if (file_exists($full_path) && is_file($full_path)) {
         return unlink($full_path);
     }
-    
+
     return false;
 }
     

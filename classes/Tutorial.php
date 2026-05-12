@@ -79,12 +79,21 @@ class Tutorial {
      * @return array<string, mixed> Success status and tutorial_id
      */
     public function create($data, $tags = [], $media = []) {
-        // validate required fields
+        // check they actually filled in the important stuff
         if (empty($data['title']) || empty($data['content']) || empty($data['instructor_id'])) {
             return ['success' => false, 'message' => 'Title, content, and instructor are required'];
         }
         
-        // generate slug from title
+        // Bug 1 fix: tags can arrive inside $data['tags'] OR as the $tags param
+        if (!empty($data['tags']) && empty($tags)) {
+            $tags = $data['tags'];
+        }
+
+        // Bug 13 fix: sanitize TinyMCE HTML content — strip dangerous tags/attrs
+        $allowed_tags = '<p><br><strong><em><u><ul><ol><li><h1><h2><h3><h4><blockquote><code><pre><a><img><table><thead><tbody><tr><th><td>';
+        $data['content'] = strip_tags($data['content'], $allowed_tags);
+        
+        // make a URL-friendly version of the title
         $slug = $this->generateUniqueSlug($data['title']);
         
         // start transaction for atomic operation
@@ -148,19 +157,19 @@ class Tutorial {
     /**
      * Generate unique slug from title
      * @param string $title
+     * @param int|null $exclude_id tutorial_id to exclude from uniqueness check (for updates)
      * @return string
      */
-    private function generateUniqueSlug($title) {
+    private function generateUniqueSlug($title, $exclude_id = null) {
         $slug = strtolower(trim($title));
         $slug = preg_replace('/[^a-z0-9-]+/', '-', $slug);
         $slug = preg_replace('/-+/', '-', $slug);
         $slug = trim($slug, '-');
         
-        // check if slug exists
         $original_slug = $slug;
         $counter = 1;
         
-        while ($this->slugExists($slug)) {
+        while ($this->slugExists($slug, $exclude_id)) {
             $slug = $original_slug . '-' . $counter;
             $counter++;
         }
@@ -171,14 +180,21 @@ class Tutorial {
     /**
      * Check if slug already exists
      * @param string $slug
+     * @param int|null $exclude_id
      * @return bool
      */
-    private function slugExists($slug) {
-        $query = "SELECT tutorial_id FROM " . $this->table . " WHERE slug = :slug LIMIT 1";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':slug', $slug, PDO::PARAM_STR);
+    private function slugExists($slug, $exclude_id = null) {
+        if ($exclude_id) {
+            $query = "SELECT tutorial_id FROM " . $this->table . " WHERE slug = :slug AND tutorial_id != :eid LIMIT 1";
+            $stmt  = $this->conn->prepare($query);
+            $stmt->bindParam(':slug', $slug,       PDO::PARAM_STR);
+            $stmt->bindParam(':eid',  $exclude_id, PDO::PARAM_INT);
+        } else {
+            $query = "SELECT tutorial_id FROM " . $this->table . " WHERE slug = :slug LIMIT 1";
+            $stmt  = $this->conn->prepare($query);
+            $stmt->bindParam(':slug', $slug, PDO::PARAM_STR);
+        }
         $stmt->execute();
-        
         return $stmt->rowCount() > 0;
     }
     
@@ -474,6 +490,9 @@ public function search($filters = [], $page = 1, $limit = 12) {
                 $orderBy = "t.created_at ASC";
                 break;
             case 'relevant':
+                // Bug 35 fix: relevance = view_count weight + avg_rating weight
+                $orderBy = "(t.view_count * 0.3 + COALESCE(AVG(r.rating), 0) * 10) DESC, t.created_at DESC";
+                break;
             case 'newest':
             default:
                 $orderBy = "t.created_at DESC";
@@ -493,7 +512,7 @@ public function search($filters = [], $page = 1, $limit = 12) {
               LEFT JOIN dbProj_categories c ON t.category_id = c.category_id
               LEFT JOIN dbProj_users u ON t.instructor_id = u.user_id
               LEFT JOIN dbProj_ratings r ON t.tutorial_id = r.tutorial_id
-              LEFT JOIN dbProj_comments cm ON t.tutorial_id = cm.tutorial_id
+              LEFT JOIN dbProj_comments cm ON t.tutorial_id = cm.tutorial_id AND cm.status = 'approved'
               WHERE $whereClause
               GROUP BY t.tutorial_id
               ORDER BY $orderBy
@@ -574,9 +593,42 @@ public function search($filters = [], $page = 1, $limit = 12) {
         try {
             $this->conn->beginTransaction();
             
-            // update main tutorial data
+            // Bug 13 fix: sanitize TinyMCE content on update too
+            $allowed_tags = '<p><br><strong><em><u><ul><ol><li><h1><h2><h3><h4><blockquote><code><pre><a><img><table><thead><tbody><tr><th><td>';
+            $data['content'] = strip_tags($data['content'], $allowed_tags);
+
+            // Bug 14 fix: update published_at when status flips to published
+            $publishedAtSql = '';
+            if (!empty($data['status']) && $data['status'] === 'published') {
+                // only set published_at if not already set (first publish)
+                $checkQuery = "SELECT published_at FROM " . $this->table . " WHERE tutorial_id = :tid LIMIT 1";
+                $checkStmt  = $this->conn->prepare($checkQuery);
+                $checkStmt->bindParam(':tid', $tutorial_id, PDO::PARAM_INT);
+                $checkStmt->execute();
+                $row = $checkStmt->fetch(PDO::FETCH_ASSOC);
+                if (empty($row['published_at'])) {
+                    $publishedAtSql = ', published_at = NOW()';
+                }
+            }
+
+            // if the title changed, we need a new URL slug too
+            // fetch the current title to compare
+            $currentStmt = $this->conn->prepare(
+                "SELECT title, slug FROM " . $this->table . " WHERE tutorial_id = :tid"
+            );
+            $currentStmt->bindParam(':tid', $tutorial_id, PDO::PARAM_INT);
+            $currentStmt->execute();
+            $current = $currentStmt->fetch(PDO::FETCH_ASSOC);
+
+            $new_slug = $current['slug']; // keep existing by default
+            if ($current && trim($current['title']) !== trim($data['title'])) {
+                $new_slug = $this->generateUniqueSlug($data['title'], $tutorial_id);
+            }
+
+            // save the changes to the database
             $query = "UPDATE " . $this->table . " 
                       SET title = :title,
+                          slug = :slug,
                           short_description = :short_description,
                           content = :content,
                           category_id = :category_id,
@@ -586,20 +638,21 @@ public function search($filters = [], $page = 1, $limit = 12) {
                           video_url = :video_url,
                           status = :status,
                           updated_at = NOW()
+                          $publishedAtSql
                       WHERE tutorial_id = :tutorial_id";
             
             $stmt = $this->conn->prepare($query);
-            
-            $stmt->bindParam(':title', $data['title'], PDO::PARAM_STR);
+            $stmt->bindParam(':title',             $data['title'],            PDO::PARAM_STR);
+            $stmt->bindParam(':slug',              $new_slug,                 PDO::PARAM_STR);
             $stmt->bindParam(':short_description', $data['short_description'], PDO::PARAM_STR);
-            $stmt->bindParam(':content', $data['content'], PDO::PARAM_STR);
-            $stmt->bindParam(':category_id', $data['category_id'], PDO::PARAM_INT);
-            $stmt->bindParam(':difficulty', $data['difficulty'], PDO::PARAM_STR);
-            $stmt->bindParam(':duration_minutes', $data['duration_minutes'], PDO::PARAM_INT);
-            $stmt->bindParam(':thumbnail', $data['thumbnail'], PDO::PARAM_STR);
-            $stmt->bindParam(':video_url', $data['video_url'], PDO::PARAM_STR);
-            $stmt->bindParam(':status', $data['status'], PDO::PARAM_STR);
-            $stmt->bindParam(':tutorial_id', $tutorial_id, PDO::PARAM_INT);
+            $stmt->bindParam(':content',           $data['content'],           PDO::PARAM_STR);
+            $stmt->bindParam(':category_id',       $data['category_id'],       PDO::PARAM_INT);
+            $stmt->bindParam(':difficulty',        $data['difficulty'],        PDO::PARAM_STR);
+            $stmt->bindParam(':duration_minutes',  $data['duration_minutes'],  PDO::PARAM_INT);
+            $stmt->bindParam(':thumbnail',         $data['thumbnail'],         PDO::PARAM_STR);
+            $stmt->bindParam(':video_url',         $data['video_url'],         PDO::PARAM_STR);
+            $stmt->bindParam(':status',            $data['status'],            PDO::PARAM_STR);
+            $stmt->bindParam(':tutorial_id',       $tutorial_id,               PDO::PARAM_INT);
             
             $stmt->execute();
             
@@ -700,22 +753,19 @@ public function search($filters = [], $page = 1, $limit = 12) {
      */
     public function logView($tutorial_id, $user_id = null) {
         try {
-            // If user is logged in, insert into activity table.
-            // The UpdateViewCount trigger fires on INSERT into dbProj_user_activity
-            // and increments view_count automatically — so we do NOT manually update
-            // view_count here to avoid double-counting.
             if ($user_id) {
-                $activityQuery = "INSERT INTO dbProj_user_activity 
+                // Bug 2 fix: use INSERT IGNORE so the trigger only fires on the
+                // very first view (new row). Repeat visits by the same user are
+                // silently ignored — no UPDATE, no second trigger fire.
+                $activityQuery = "INSERT IGNORE INTO dbProj_user_activity 
                                   (user_id, tutorial_id, activity_type, activity_date) 
-                                  VALUES (:user_id, :tutorial_id, 'view', NOW())
-                                  ON DUPLICATE KEY UPDATE activity_date = NOW()";
-                
+                                  VALUES (:user_id, :tutorial_id, 'view', NOW())";
                 $activityStmt = $this->conn->prepare($activityQuery);
-                $activityStmt->bindParam(':user_id', $user_id, PDO::PARAM_INT);
+                $activityStmt->bindParam(':user_id',     $user_id,     PDO::PARAM_INT);
                 $activityStmt->bindParam(':tutorial_id', $tutorial_id, PDO::PARAM_INT);
                 $activityStmt->execute();
             } else {
-                // Guest view — trigger won't fire, so increment manually
+                // Guest view — no activity row, no trigger, so increment manually
                 $query = "UPDATE " . $this->table . " 
                           SET view_count = view_count + 1 
                           WHERE tutorial_id = :tutorial_id";
@@ -723,9 +773,7 @@ public function search($filters = [], $page = 1, $limit = 12) {
                 $stmt->bindParam(':tutorial_id', $tutorial_id, PDO::PARAM_INT);
                 $stmt->execute();
             }
-            
             return true;
-            
         } catch (PDOException $e) {
             return false;
         }
@@ -744,7 +792,15 @@ public function uploadMedia($tutorial_id, $file, $type = 'document') {
     require_once __DIR__ . '/FileUpload.php';
     
     $fileUpload = new FileUpload();
-    $upload_result = $fileUpload->uploadDocument($file, 'tutorial_' . $tutorial_id);
+
+    // Bug 9 fix: call the correct upload method based on media type
+    if ($type === 'image') {
+        $upload_result = $fileUpload->uploadThumbnail($file, 'media_' . $tutorial_id);
+    } elseif ($type === 'video') {
+        $upload_result = $fileUpload->uploadFile_public($file, 'video', 'tutorials/videos/', 'video_' . $tutorial_id);
+    } else {
+        $upload_result = $fileUpload->uploadDocument($file, 'doc_' . $tutorial_id);
+    }
     
     if (!$upload_result['success']) {
         return $upload_result;
@@ -772,7 +828,6 @@ public function uploadMedia($tutorial_id, $file, $type = 'document') {
         ];
         
     } catch (PDOException $e) {
-        // rollback file if database fails
         $fileUpload->deleteFile($upload_result['filepath']);
         return ['success' => false, 'message' => 'Database error: ' . $e->getMessage()];
     }
@@ -784,30 +839,30 @@ public function uploadMedia($tutorial_id, $file, $type = 'document') {
      * @return bool
      */
     public function deleteMedia($media_id) {
-        // get file path first
         $query = "SELECT file_path FROM dbProj_tutorial_media WHERE media_id = :media_id";
-        $stmt = $this->conn->prepare($query);
+        $stmt  = $this->conn->prepare($query);
         $stmt->bindParam(':media_id', $media_id, PDO::PARAM_INT);
         $stmt->execute();
         
         if ($stmt->rowCount() === 1) {
             $media = $stmt->fetch(PDO::FETCH_ASSOC);
-            $file_path = UPLOAD_PATH . 'tutorials/' . $media['file_path'];
             
-            // delete from database
+            // Bug 30 fix: file_path from FileUpload already contains the full
+            // relative path (e.g. "tutorials/thumbnails/file.jpg").
+            // Don't prepend 'tutorials/' again — use UPLOAD_PATH directly.
+            $file_path = UPLOAD_PATH . ltrim($media['file_path'], '/');
+            
             $deleteQuery = "DELETE FROM dbProj_tutorial_media WHERE media_id = :media_id";
-            $deleteStmt = $this->conn->prepare($deleteQuery);
+            $deleteStmt  = $this->conn->prepare($deleteQuery);
             $deleteStmt->bindParam(':media_id', $media_id, PDO::PARAM_INT);
             
             if ($deleteStmt->execute()) {
-                // delete physical file
-                if (file_exists($file_path)) {
+                if (file_exists($file_path) && is_file($file_path)) {
                     unlink($file_path);
                 }
                 return true;
             }
         }
-        
         return false;
     }
     
@@ -853,23 +908,5 @@ public function uploadMedia($tutorial_id, $file, $type = 'document') {
     }
 }
 
-// test block
-if (basename(__FILE__) == basename($_SERVER['PHP_SELF'])) {
-    echo '<!DOCTYPE html><html><head><title>Tutorial Class Test</title>';
-    echo '<style>body{font-family:Arial;padding:20px;background:#f5f5f5;}</style></head><body>';
-    echo '<h2>✅ Tutorial Class Test</h2>';
-    
-    try {
-        $tutorial = new Tutorial();
-        echo '<p style="color:green;">✓ Tutorial class loaded successfully!</p>';
-        
-        $published = $tutorial->getPublished();
-        echo '<p>Published tutorials: <strong>' . count($published['tutorials']) . '</strong></p>';
-        
-    } catch (Exception $e) {
-        echo '<p style="color:red;">✗ Error: ' . $e->getMessage() . '</p>';
-    }
-    
-    echo '</body></html>';
-}
+// End of Tutorial class
 ?>

@@ -1,92 +1,78 @@
 <?php
 /**
- * Rate Limiter Class
- * Prevents brute force attacks
+ * RateLimiter — file-based so clearing cookies cannot bypass it
+ * Bug 9 fix: old version stored attempts in $_SESSION which could be
+ * bypassed by simply clearing cookies. This version stores data in
+ * temp files keyed by a hash of email+IP.
  * Hasan Fardan - 202301686
  */
-
 class RateLimiter {
-    private $max_attempts = 10;
-    private $lockout_time = 900; // 15 minutes
-    
-    /**
-     * Check if IP is rate limited
-     * @param string $identifier (email or IP)
-     * @return bool
-     */
-    public function isRateLimited($identifier) {
-        $key = 'rate_limit_' . md5($identifier);
-        
-        if (!isset($_SESSION[$key])) {
+    private int    $max_attempts = 10;
+    private int    $lockout_time = 900; // 15 minutes
+    private string $storage_dir;
+
+    public function __construct() {
+        // store in system temp — survives session clears
+        $this->storage_dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'techknow_rl' . DIRECTORY_SEPARATOR;
+        if (!is_dir($this->storage_dir)) {
+            mkdir($this->storage_dir, 0700, true);
+        }
+    }
+
+    private function filePath(string $identifier): string {
+        return $this->storage_dir . md5($identifier) . '.json';
+    }
+
+    private function load(string $identifier): array {
+        $path = $this->filePath($identifier);
+        if (!file_exists($path)) {
+            return ['attempts' => 0, 'last_attempt' => 0];
+        }
+        $data = json_decode(file_get_contents($path), true);
+        return is_array($data) ? $data : ['attempts' => 0, 'last_attempt' => 0];
+    }
+
+    private function save(string $identifier, array $data): void {
+        file_put_contents($this->filePath($identifier), json_encode($data), LOCK_EX);
+    }
+
+    public function isRateLimited(string $identifier): bool {
+        $data = $this->load($identifier);
+        // lockout expired — auto-reset
+        if ($data['last_attempt'] > 0 && (time() - $data['last_attempt']) > $this->lockout_time) {
+            $this->reset($identifier);
             return false;
         }
-        
-        $data = $_SESSION[$key];
-        
-        // Check if lockout period has expired
-        if (time() - $data['last_attempt'] > $this->lockout_time) {
-            unset($_SESSION[$key]);
-            return false;
-        }
-        
         return $data['attempts'] >= $this->max_attempts;
     }
-    
-    /**
-     * Record failed attempt
-     * @param string $identifier
-     * @return void
-     */
-    public function recordAttempt($identifier) {
-        $key = 'rate_limit_' . md5($identifier);
-        
-        if (!isset($_SESSION[$key])) {
-            $_SESSION[$key] = ['attempts' => 0, 'last_attempt' => time()];
+
+    public function recordAttempt(string $identifier): void {
+        $data = $this->load($identifier);
+        // reset counter if lockout window has passed
+        if ((time() - $data['last_attempt']) > $this->lockout_time) {
+            $data['attempts'] = 0;
         }
-        
-        $_SESSION[$key]['attempts']++;
-        $_SESSION[$key]['last_attempt'] = time();
+        $data['attempts']++;
+        $data['last_attempt'] = time();
+        $this->save($identifier, $data);
     }
-    
-    /**
-     * Reset attempts on successful login
-     * @param string $identifier
-     * @return void
-     */
-    public function reset($identifier) {
-        $key = 'rate_limit_' . md5($identifier);
-        unset($_SESSION[$key]);
-    }
-    
-    /**
-     * Get remaining attempts
-     * @param string $identifier
-     * @return int
-     */
-    public function getRemainingAttempts($identifier) {
-        $key = 'rate_limit_' . md5($identifier);
-        
-        if (!isset($_SESSION[$key])) {
-            return $this->max_attempts;
+
+    public function reset(string $identifier): void {
+        $path = $this->filePath($identifier);
+        if (file_exists($path)) {
+            unlink($path);
         }
-        
-        return max(0, $this->max_attempts - $_SESSION[$key]['attempts']);
     }
-    
-    /**
-     * Get lockout time remaining
-     * @param string $identifier
-     * @return int seconds
-     */
-    public function getLockoutTimeRemaining($identifier) {
-        $key = 'rate_limit_' . md5($identifier);
-        
-        if (!isset($_SESSION[$key])) {
-            return 0;
-        }
-        
-        $elapsed = time() - $_SESSION[$key]['last_attempt'];
-        return max(0, $this->lockout_time - $elapsed);
+
+    public function getRemainingAttempts(string $identifier): int {
+        $data = $this->load($identifier);
+        return max(0, $this->max_attempts - $data['attempts']);
+    }
+
+    public function getLockoutTimeRemaining(string $identifier): int {
+        $data = $this->load($identifier);
+        if ($data['last_attempt'] === 0) return 0;
+        return max(0, $this->lockout_time - (time() - $data['last_attempt']));
     }
 }
 ?>

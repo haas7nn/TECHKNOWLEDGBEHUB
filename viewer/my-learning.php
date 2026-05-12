@@ -1,59 +1,57 @@
 <?php
-/**
- * My Learning Page
- * students saved and enrolled tutorials
- * Hasan Fardan - 202301686
- */
+// my learning page — shows all the tutorials this student has started or completed
+// Hasan Fardan - 202301686
 
-// Make sure the user is logged in before showing their stuff
 require_once '../includes/viewer-auth-check.php';
 
-// Pull in the Tutorial class for database operations
-require_once '../classes/Tutorial.php';
+$page_title  = 'My Learning';
+$active_tab  = isset($_GET['tab']) ? clean($_GET['tab']) : 'all';
+$css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
 
-// Set the page title for the browser tab
-$page_title = 'My Learning';
-
-// === FIGURE OUT WHICH TAB IS ACTIVE ===
-// Check the URL for a tab parameter (all, in-progress, completed, favorites)
-// Default to 'all' if nothing is specified
-$active_tab = isset($_GET['tab']) ? clean($_GET['tab']) : 'all';
-
-// === CONNECT TO DATABASE ===
-// Need a direct connection for our custom query below
 $database = new Database();
-$conn = $database->connect();
+$conn     = $database->connect();
 
-// === BUILD THE MAIN QUERY ===
-// This pulls all tutorials the user has interacted with, plus ratings info
-$query = "SELECT DISTINCT t.*, c.category_name, u.full_name as instructor_name,
-          ua.activity_type,
-          COALESCE(ua.progress_percentage, 0) as progress,
-          COALESCE(AVG(r.rating), 0) as avg_rating,
-          COUNT(DISTINCT r2.rating_id) as rating_count
+// Bug 4 fix: always check the connection worked before using it
+if (!$conn) {
+    setFlashMessage('Database connection error. Please try again.', 'error');
+    redirect('viewer/dashboard.php');
+}
+
+// Bug 3 fix: added ANY_VALUE() around activity_type and activity_date so this
+// works when MySQL is running in ONLY_FULL_GROUP_BY mode (which is the default
+// in MySQL 5.7+ and 8.0). Without it the query would fail on strict servers.
+$query = "SELECT t.tutorial_id, t.title, t.slug, t.thumbnail, t.difficulty,
+                  t.duration_minutes, t.view_count,
+                  c.category_name,
+                  u.full_name AS instructor_name,
+                  ANY_VALUE(ua.activity_type)  AS activity_type,
+                  ANY_VALUE(ua.activity_date)  AS activity_date,
+                  CASE
+                    WHEN MAX(CASE WHEN ua.activity_type = 'complete' THEN 1 ELSE 0 END) = 1 THEN 100
+                    WHEN MAX(ua.activity_date) >= DATE_SUB(NOW(), INTERVAL 7 DAY)  THEN 75
+                    WHEN MAX(ua.activity_date) >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 50
+                    ELSE 25
+                  END AS progress,
+                  COALESCE(AVG(r.rating), 0) AS avg_rating,
+                  COUNT(DISTINCT r.rating_id) AS rating_count
           FROM dbProj_user_activity ua
-          JOIN dbProj_tutorials t ON ua.tutorial_id = t.tutorial_id
-          JOIN dbProj_categories c ON t.category_id = c.category_id
-          JOIN dbProj_users u ON t.instructor_id = u.user_id
-          LEFT JOIN dbProj_ratings r ON t.tutorial_id = r.tutorial_id
-          LEFT JOIN dbProj_ratings r2 ON t.tutorial_id = r2.tutorial_id
+          JOIN dbProj_tutorials t  ON ua.tutorial_id  = t.tutorial_id
+          JOIN dbProj_categories c ON t.category_id   = c.category_id
+          JOIN dbProj_users u       ON t.instructor_id = u.user_id
+          LEFT JOIN dbProj_ratings r ON t.tutorial_id  = r.tutorial_id
           WHERE ua.user_id = :user_id";
 
-// === APPLY TAB FILTER ===
-// If the user clicked a specific tab, filter the results
+// filter by tab if the student picked one
 if ($active_tab === 'completed') {
-    // Only show tutorials they fully finished
     $query .= " AND ua.activity_type = 'complete'";
 } elseif ($active_tab === 'in-progress') {
-    // Only show tutorials they started but haven't finished
-    $query .= " AND ua.activity_type = 'view' AND ua.progress_percentage < 100";
+    $query .= " AND ua.activity_type = 'view'";
 }
-// NOTE: 'all' and 'favorites' tabs don't need extra filtering yet
-// (favorites logic will need to be added later)
 
-// === FINISH AND RUN THE QUERY ===
-// Group by tutorial so we don't get duplicates, order by most recent activity
-$query .= " GROUP BY t.tutorial_id ORDER BY ua.activity_date DESC";
+// group by tutorial so we get one row per tutorial, not one per activity
+$query .= " GROUP BY t.tutorial_id, t.title, t.slug, t.thumbnail, t.difficulty,
+                      t.duration_minutes, t.view_count, c.category_name, u.full_name
+            ORDER BY ANY_VALUE(ua.activity_date) DESC";
 
 $stmt = $conn->prepare($query);
 $stmt->bindParam(':user_id', $current_user_id, PDO::PARAM_INT);
@@ -66,103 +64,105 @@ $my_tutorials = $stmt->fetchAll();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $page_title ?> - <?= SITE_NAME ?></title>
-    
-    <!-- Our custom styles -->
-    <link rel="stylesheet" href="<?= asset('css/viewer.css') ?>">
-    
-    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="<?= asset('css/viewer.css') ?>?v=<?= $css_version ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <!-- Top navigation bar -->
     <?php include '../includes/viewer-nav.php'; ?>
-    
+
     <div class="viewer-container">
-        <!-- Side menu -->
         <?php include '../includes/viewer-sidebar.php'; ?>
-        
-        <!-- Main content area -->
+
         <main class="viewer-main">
-            <!-- Page header -->
+
             <div class="dashboard-header">
                 <div>
                     <h1><i class="fas fa-graduation-cap"></i> My Learning</h1>
                     <p>Track your progress and continue where you left off</p>
                 </div>
             </div>
-            
-            <!-- Show any flash messages (like "Tutorial added!" or errors) -->
+
             <?php displayFlashMessage(); ?>
-            
-            <!-- === TAB NAVIGATION === -->
-            <!-- Four tabs: All, In Progress, Completed, Favorites -->
-            <div class="tabs-navigation">
-                <a href="?tab=all" class="tab <?= $active_tab === 'all' ? 'active' : '' ?>">
-                    <i class="fas fa-th"></i>
-                    All Tutorials
+
+            <!-- tab buttons to filter by status -->
+            <div class="my-learning-tabs">
+                <a href="?tab=all"
+                   class="tab-btn <?= $active_tab === 'all' ? 'active' : '' ?>">
+                    <i class="fas fa-th"></i> All
                 </a>
-                <a href="?tab=in-progress" class="tab <?= $active_tab === 'in-progress' ? 'active' : '' ?>">
-                    <i class="fas fa-tasks"></i>
-                    In Progress
+                <a href="?tab=in-progress"
+                   class="tab-btn <?= $active_tab === 'in-progress' ? 'active' : '' ?>">
+                    <i class="fas fa-tasks"></i> In Progress
                 </a>
-                <a href="?tab=completed" class="tab <?= $active_tab === 'completed' ? 'active' : '' ?>">
-                    <i class="fas fa-check-circle"></i>
-                    Completed
-                </a>
-                <a href="?tab=favorites" class="tab <?= $active_tab === 'favorites' ? 'active' : '' ?>">
-                    <i class="fas fa-heart"></i>
-                    Favorites
+                <a href="?tab=completed"
+                   class="tab-btn <?= $active_tab === 'completed' ? 'active' : '' ?>">
+                    <i class="fas fa-check-circle"></i> Completed
                 </a>
             </div>
-            
-            <!-- === TUTORIALS LIST === -->
+
             <?php if (empty($my_tutorials)): ?>
-                <!-- Nothing to show — friendly empty state -->
-                <div class="empty-state-large">
+                <!-- nothing found — point them to browse -->
+                <div class="empty-state">
                     <i class="fas fa-book-reader"></i>
-                    <h2>No tutorials found</h2>
-                    <p>Start learning by exploring our tutorial library</p>
-                    <a href="browse-tutorials.php" class="btn btn-primary btn-large">
-                        <i class="fas fa-search"></i>
-                        Browse Tutorials
+                    <h3>No tutorials here yet</h3>
+                    <p>Start learning by browsing the tutorial library</p>
+                    <a href="browse-tutorials.php" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Browse Tutorials
                     </a>
                 </div>
             <?php else: ?>
-                <!-- Loop through and display each tutorial card -->
-                <div class="learning-grid">
+                <div class="tutorials-grid">
                     <?php foreach ($my_tutorials as $tutorial): ?>
-                    <div class="learning-card">
-                        <div class="card-image">
-                            <!-- Show the tutorial thumbnail -->
-                            <img src="<?= $tutorial['thumbnail'] ?>" alt="<?= e($tutorial['title']) ?>">
-                        </div>
-                        <div class="card-body">
-                            <!-- Tutorial title -->
-                            <h3><?= e($tutorial['title']) ?></h3>
-                            <!-- Instructor name -->
-                            <p class="instructor">
-                                <i class="fas fa-user"></i>
-                                <?= e($tutorial['instructor_name']) ?>
-                            </p>
-                            
-                            <!-- Progress bar showing how far they've gotten -->
-                            <div class="progress-section">
-                                <div class="progress-bar">
-                                    <div class="progress-fill" style="width: <?= $tutorial['progress'] ?>%"></div>
+                    <div class="tutorial-card">
+
+                        <!-- thumbnail or placeholder icon -->
+                        <div class="card-thumbnail">
+                            <?php if (!empty($tutorial['thumbnail'])): ?>
+                                <img src="<?= SITE_URL ?>/uploads/<?= e($tutorial['thumbnail']) ?>"
+                                     alt="<?= e($tutorial['title']) ?>"
+                                     onerror="this.style.display='none'">
+                            <?php else: ?>
+                                <div style="height:180px;background:#e8ecf1;display:flex;align-items:center;justify-content:center;">
+                                    <i class="fas fa-book" style="font-size:48px;color:#aaa;"></i>
                                 </div>
-                                <span class="progress-text"><?= $tutorial['progress'] ?>% Complete</span>
+                            <?php endif; ?>
+                            <span class="difficulty-badge difficulty-<?= e($tutorial['difficulty']) ?>">
+                                <?= ucfirst(e($tutorial['difficulty'])) ?>
+                            </span>
+                        </div>
+
+                        <div class="card-body">
+                            <span class="category-tag">
+                                <i class="fas fa-folder"></i> <?= e($tutorial['category_name']) ?>
+                            </span>
+                            <h3><?= e($tutorial['title']) ?></h3>
+                            <p class="instructor">
+                                <i class="fas fa-user"></i> <?= e($tutorial['instructor_name']) ?>
+                            </p>
+
+                            <!-- progress bar — based on activity type and recency -->
+                            <div class="progress-wrapper">
+                                <div class="progress-bar">
+                                    <div class="progress-fill"
+                                         style="width:<?= (int)$tutorial['progress'] ?>%;"></div>
+                                </div>
+                                <span class="progress-text">
+                                    <?= (int)$tutorial['progress'] ?>% complete
+                                </span>
                             </div>
-                            
-                            <!-- Action buttons: Continue/Start and Remove -->
-                            <div class="card-actions">
-                                <!-- Say "Continue" if they already started, "Start" if they haven't -->
-                                <a href="tutorial-view.php?id=<?= $tutorial['tutorial_id'] ?>" class="btn btn-primary btn-block">
-                                    <?= $tutorial['progress'] > 0 ? 'Continue' : 'Start' ?> Learning
+
+                            <div class="card-footer">
+                                <!-- continue or review depending on progress -->
+                                <a href="<?= SITE_URL ?>/viewer/tutorial-view.php?slug=<?= urlencode($tutorial['slug']) ?>"
+                                   class="btn btn-primary btn-sm">
+                                    <?= $tutorial['progress'] >= 100 ? 'Review' : 'Continue' ?>
+                                    <i class="fas fa-arrow-right"></i>
                                 </a>
-                                <!-- Remove button (placeholder for now) -->
-                                <button class="btn btn-outline btn-block" onclick="removeTutorial(<?= $tutorial['tutorial_id'] ?>)">
-                                    <i class="fas fa-trash"></i>
-                                    Remove
+
+                                <!-- remove from list — calls the API with AJAX -->
+                                <button class="btn btn-outline btn-sm"
+                                        onclick="removeTutorial(<?= (int)$tutorial['tutorial_id'] ?>, this)">
+                                    <i class="fas fa-times"></i> Remove
                                 </button>
                             </div>
                         </div>
@@ -170,17 +170,45 @@ $my_tutorials = $stmt->fetchAll();
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
+
         </main>
     </div>
-    
+
     <script>
-        // Remove a tutorial from the user's learning list
-        // NOTE: This is just a placeholder , will connect to backend later
-        function removeTutorial(id) {
-            if (confirm('Remove this tutorial from your learning list?')) {
-                alert('Remove feature will be implemented with Tutorial class');
+    // sends an AJAX request to delete this tutorial from the student's activity log
+    // then removes the card from the page without a full reload
+    function removeTutorial(tutorialId, btn) {
+        if (!confirm('Remove this tutorial from your learning list?')) return;
+
+        // disable the button while the request is running
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        fetch('<?= SITE_URL ?>/api/remove-learning.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tutorial_id: tutorialId,
+                csrf_token: '<?= generateCSRFToken() ?>'
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                // remove the card from the page
+                btn.closest('.tutorial-card').remove();
+            } else {
+                alert(data.message || 'Failed to remove. Please try again.');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-times"></i> Remove';
             }
-        }
+        })
+        .catch(() => {
+            alert('Network error. Please try again.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-times"></i> Remove';
+        });
+    }
     </script>
 </body>
 </html>
