@@ -489,7 +489,8 @@ if ($conn) {
             <div class="feat-img">
                 <?php if (!empty($tut['thumbnail'])): ?>
                     <img src="<?= SITE_URL ?>/uploads/<?= e($tut['thumbnail']) ?>"
-                         alt="<?= e($tut['title']) ?>">
+                         alt="<?= e($tut['title']) ?>"
+                         onerror="this.onerror=null;this.src='<?= SITE_URL ?>/uploads/placeholder.svg'">
                 <?php else: ?>
                     <i class="fas fa-book no-img" aria-hidden="true"></i>
                 <?php endif; ?>
@@ -546,7 +547,8 @@ if ($conn) {
             <div class="feat-img">
                 <?php if (!empty($tut['thumbnail'])): ?>
                     <img src="<?= SITE_URL ?>/uploads/<?= e($tut['thumbnail']) ?>"
-                         alt="<?= e($tut['title']) ?>">
+                         alt="<?= e($tut['title']) ?>"
+                         onerror="this.onerror=null;this.src='<?= SITE_URL ?>/uploads/placeholder.svg'">
                 <?php else: ?>
                     <i class="fas fa-book no-img" aria-hidden="true"></i>
                 <?php endif; ?>

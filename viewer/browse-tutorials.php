@@ -226,7 +226,8 @@ if ($conn) {
                         <div class="card-thumbnail">
                             <?php if (!empty($tutorial['thumbnail'])): ?>
                                 <img src="<?= SITE_URL ?>/uploads/<?= e($tutorial['thumbnail']) ?>"
-                                     alt="<?= e($tutorial['title']) ?>">
+                                     alt="<?= e($tutorial['title']) ?>"
+                                     onerror="this.onerror=null;this.src='<?= SITE_URL ?>/uploads/placeholder.svg'">
                             <?php else: ?>
                                 <i class="fas fa-book thumb-icon"></i>
                             <?php endif; ?>
@@ -265,7 +266,8 @@ if ($conn) {
                                 <?php if (!empty($tutorial['instructor_avatar'])): ?>
                                     <img src="<?= SITE_URL ?>/uploads/<?= e($tutorial['instructor_avatar']) ?>"
                                          alt="<?= e($tutorial['instructor_name']) ?>"
-                                         style="width:22px;height:22px;border-radius:50%;object-fit:cover;">
+                                         style="width:22px;height:22px;border-radius:50%;object-fit:cover;"
+                                         onerror="this.onerror=null;this.style.display='none'">
                                 <?php else: ?>
                                     <i class="fas fa-user-circle" style="font-size:20px;color:#cbd5e0;"></i>
                                 <?php endif; ?>

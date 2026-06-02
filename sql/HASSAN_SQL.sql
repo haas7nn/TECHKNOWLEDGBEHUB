@@ -667,6 +667,47 @@ ORDER BY relevance DESC
 LIMIT 5;
 
 -- ============================================================================
+-- FIX: Replace placeholder thumbnails with the shared SVG placeholder image
+--      so tutorial cards always render an actual image (rubric req 1.2).
+-- ============================================================================
+UPDATE dbProj_tutorials SET thumbnail = 'placeholder.svg';
+
+-- ============================================================================
+-- FIX: Replace fake example.com video URLs with real YouTube embed URLs
+--      so the video media section is demonstrable (rubric req 1.2 media file).
+-- ============================================================================
+UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/2pWv7GOvuf0'
+    WHERE slug = 'php-mysql-complete-guide-for-beginners';
+UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/PkZNo7MFNFg'
+    WHERE slug = 'mastering-javascript-es6-and-beyond';
+UPDATE dbProj_tutorials SET video_url = NULL
+    WHERE slug = 'database-design-fundamentals';
+UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/HXV3zeQKqGY'
+    WHERE slug = 'sql-query-optimization-advanced-techniques';
+UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/rfscVS0vtbw'
+    WHERE slug = 'python-for-data-science-complete-course';
+UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/tPYj3fFJGjk'
+    WHERE slug = 'machine-learning-with-python-from-scratch';
+UPDATE dbProj_tutorials SET video_url = NULL
+    WHERE slug = 'react-native-mobile-app-development';
+UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/3hLmDS179YE'
+    WHERE slug = 'aws-cloud-essentials-for-beginners';
+UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/SLwpqD8n3d0'
+    WHERE slug = 'building-restful-apis-with-php';
+UPDATE dbProj_tutorials SET video_url = NULL
+    WHERE slug = 'git-and-github-complete-workflow-guide';
+UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/1Rs2ND1ryYc'
+    WHERE slug = 'css-grid-and-flexbox-masterclass';
+UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/Oe421EPjeBE'
+    WHERE slug = 'nodejs-backend-development-with-express';
+UPDATE dbProj_tutorials SET video_url = NULL
+    WHERE slug = 'docker-containerization-complete-guide';
+UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/c2M-rlkkT5o'
+    WHERE slug = 'mongodb-nosql-database-for-beginners';
+UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/4deVCNJq3qc'
+    WHERE slug = 'vuejs-3-complete-crash-course';
+
+-- ============================================================================
 -- SETUP COMPLETE
 -- ============================================================================
 

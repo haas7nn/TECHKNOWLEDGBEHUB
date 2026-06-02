@@ -151,7 +151,8 @@ try {
                         <div class="card-thumbnail">
                             <?php if (!empty($tut['thumbnail'])): ?>
                                 <img src="<?= SITE_URL ?>/uploads/<?= e($tut['thumbnail']) ?>"
-                                     alt="<?= e($tut['title']) ?>">
+                                     alt="<?= e($tut['title']) ?>"
+                                     onerror="this.onerror=null;this.src='<?= SITE_URL ?>/uploads/placeholder.svg'">
                             <?php else: ?>
                                 <i class="fas fa-book thumb-icon"></i>
                             <?php endif; ?>

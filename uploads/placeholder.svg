@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#grad)" rx="8"/>
+  <!-- Book icon in centre -->
+  <g transform="translate(350,155)">
+    <rect x="0" y="0" width="90" height="110" rx="6" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="5"/>
+    <rect x="12" y="0" width="78" height="110" rx="6" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.5)" stroke-width="4"/>
+    <line x1="12" y1="20" x2="80" y2="20" stroke="rgba(255,255,255,0.5)" stroke-width="3"/>
+    <line x1="12" y1="35" x2="80" y2="35" stroke="rgba(255,255,255,0.5)" stroke-width="3"/>
+    <line x1="12" y1="50" x2="60" y2="50" stroke="rgba(255,255,255,0.5)" stroke-width="3"/>
+  </g>
+  <text x="400" y="310" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" font-weight="700" fill="rgba(255,255,255,0.9)">TechKnowledge Hub</text>
+  <text x="400" y="345" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" fill="rgba(255,255,255,0.65)">Tutorial Thumbnail</text>
+</svg>

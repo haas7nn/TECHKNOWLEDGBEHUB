@@ -102,7 +102,7 @@ usort($my_tutorials, function($a, $b) use ($sort) {
                             <!-- thumbnail with a status badge overlaid -->
                             <div class="tutorial-thumbnail">
                                 <?php if (!empty($tut['thumbnail'])): ?>
-                                    <img src="<?= SITE_URL ?>/uploads/<?= e($tut['thumbnail']) ?>" alt="<?= e($tut['title']) ?>">
+                                    <img src="<?= SITE_URL ?>/uploads/<?= e($tut['thumbnail']) ?>" alt="<?= e($tut['title']) ?>" onerror="this.onerror=null;this.src='<?= SITE_URL ?>/uploads/placeholder.svg'">
                                 <?php else: ?>
                                     <div class="thumb-placeholder tall"><i class="fas fa-book"></i></div>
                                 <?php endif; ?>
