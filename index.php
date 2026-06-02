@@ -21,6 +21,7 @@ $total_tutorials  = 0;
 $total_categories = 0;
 $total_students   = 0;
 $featured         = [];
+$latest           = [];
 $categories       = [];
 
 if ($conn) {
@@ -49,6 +50,25 @@ if ($conn) {
     );
     $stmt->execute();
     $featured = $stmt->fetchAll();
+
+    // get latest 6 published tutorials (reverse chronological — satisfies req 1.2)
+    $latestStmt = $conn->prepare(
+        "SELECT t.tutorial_id, t.title, t.slug, t.thumbnail, t.short_description,
+                t.difficulty, t.view_count, t.duration_minutes, t.published_at,
+                u.full_name AS instructor_name,
+                c.category_name,
+                COALESCE(AVG(r.rating), 0) AS avg_rating
+         FROM dbProj_tutorials t
+         JOIN dbProj_users u      ON u.user_id     = t.instructor_id
+         JOIN dbProj_categories c ON c.category_id = t.category_id
+         LEFT JOIN dbProj_ratings r ON r.tutorial_id = t.tutorial_id
+         WHERE t.status = 'published'
+         GROUP BY t.tutorial_id
+         ORDER BY t.published_at DESC
+         LIMIT 6"
+    );
+    $latestStmt->execute();
+    $latest = $latestStmt->fetchAll();
 
     // get all categories
     $categories = $conn->query(
@@ -453,6 +473,63 @@ if ($conn) {
         <?= e($cat['category_name']) ?>
     </a>
     <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
+<!-- latest tutorials (reverse chronological — newest first, per req 1.2) -->
+<?php if (!empty($latest)): ?>
+<div class="featured-section" style="background:var(--c-surface);border-bottom:1px solid var(--c-border);">
+    <h2>Latest Tutorials</h2>
+    <p class="sub">Newest content, added most recently first</p>
+
+    <div class="featured-grid">
+        <?php foreach ($latest as $tut): ?>
+        <a href="<?= SITE_URL ?>/viewer/tutorial-view.php?slug=<?= urlencode($tut['slug']) ?>"
+           class="feat-card">
+            <div class="feat-img">
+                <?php if (!empty($tut['thumbnail'])): ?>
+                    <img src="<?= SITE_URL ?>/uploads/<?= e($tut['thumbnail']) ?>"
+                         alt="<?= e($tut['title']) ?>">
+                <?php else: ?>
+                    <i class="fas fa-book no-img" aria-hidden="true"></i>
+                <?php endif; ?>
+                <span class="difficulty-badge difficulty-<?= e($tut['difficulty']) ?>"
+                      style="position:absolute;top:10px;right:10px;">
+                    <?= ucfirst($tut['difficulty']) ?>
+                </span>
+            </div>
+            <div class="feat-body">
+                <div class="feat-cat">
+                    <i class="fas fa-folder" aria-hidden="true"></i> <?= e($tut['category_name']) ?>
+                </div>
+                <div class="feat-title"><?= e($tut['title']) ?></div>
+                <p style="font-size:13px;color:var(--c-text-3);line-height:1.5;flex:1;">
+                    <?= e(truncate($tut['short_description'], 100)) ?>
+                </p>
+                <div class="feat-meta">
+                    <span><i class="fas fa-user" aria-hidden="true"></i> <?= e($tut['instructor_name']) ?></span>
+                    <span><i class="fas fa-calendar-alt" aria-hidden="true"></i>
+                        <?= date('M j, Y', strtotime($tut['published_at'])) ?>
+                    </span>
+                    <span><i class="fas fa-star" aria-hidden="true"></i>
+                        <?= number_format((float)$tut['avg_rating'], 1) ?>
+                    </span>
+                </div>
+                <div style="margin-top:14px;">
+                    <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--c-primary);">
+                        View More <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    </span>
+                </div>
+            </div>
+        </a>
+        <?php endforeach; ?>
+    </div>
+
+    <div class="view-all-wrap">
+        <a href="<?= SITE_URL ?>/public/search.php?sort=newest" class="btn-view-all">
+            View All (Newest First) <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        </a>
+    </div>
 </div>
 <?php endif; ?>
 
