@@ -3,6 +3,9 @@
  * Hasan Fardan - 202301686
  */
 
+/* Import shared design tokens so var(--c-*) resolves on all viewer pages */
+@import url('./shared.css');
+
 /* ===================== RESET & BASE ===================== */
 *, *::before, *::after {
     box-sizing: border-box;

@@ -151,6 +151,8 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= e($tutorial['title']) ?> | <?= SITE_NAME ?></title>
+    <!-- shared design tokens must load first so var(--c-*) resolves in viewer.css and inline styles -->
+    <link rel="stylesheet" href="<?= asset('css/shared.css') ?>">
     <!-- cache bust the CSS so updated styles always load -->
     <link rel="stylesheet" href="<?= asset('css/viewer.css') ?>?v=<?= $css_version ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">

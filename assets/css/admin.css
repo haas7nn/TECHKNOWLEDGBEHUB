@@ -1,4 +1,7 @@
 /* ===================== ADMIN PANEL CSS ===================== */
+/* Shared design tokens for --c-* variables and flash message styles */
+@import url('./shared.css');
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {

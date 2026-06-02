@@ -3,6 +3,8 @@
  * Making the login and register pages look clean and professional
  * Hasan Fardan - 202301686
  */
+/* Shared design tokens — provides --c-* variables and flash message styles */
+@import url('./shared.css');
 
 /* ==================== RESET & BASE ==================== */
 * {

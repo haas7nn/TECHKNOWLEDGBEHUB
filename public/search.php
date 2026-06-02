@@ -98,6 +98,7 @@ $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $page_title ?> | <?= SITE_NAME ?></title>
+    <link rel="stylesheet" href="<?= asset('css/shared.css') ?>">
     <link rel="stylesheet" href="<?= asset('css/search.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
