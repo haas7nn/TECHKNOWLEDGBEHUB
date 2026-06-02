@@ -396,77 +396,77 @@ INSERT INTO dbProj_tutorials (title, slug, short_description, content, thumbnail
 -- Tutorial 1
 ('Complete PHP & MySQL Course for Beginners', 'php-mysql-beginners', 'Learn PHP and MySQL from scratch with hands-on projects and real-world examples', 
 '<h2>Introduction to PHP</h2><p>PHP is a powerful server-side scripting language designed for web development. In this comprehensive course, you will learn everything from basic syntax to advanced database integration.</p><h2>What You Will Learn</h2><ul><li>PHP syntax and fundamentals</li><li>Working with forms and user input</li><li>MySQL database integration</li><li>CRUD operations</li><li>Security best practices</li></ul><h2>Course Content</h2><p>We start with the basics of PHP syntax, variables, and control structures. Then we move into functions, arrays, and object-oriented programming. Finally, we integrate MySQL databases and build a complete web application.</p>', 
-'php-mysql-thumb.jpg', 'https://example.com/videos/php-mysql-course.mp4', 1, 2, 'beginner', 240, 'published', 1523, '2024-01-15 10:00:00'),
+'thumb-php-mysql.svg', 'https://www.youtube.com/embed/2pWv7GOvuf0', 1, 2, 'beginner', 240, 'published', 1523, '2024-01-15 10:00:00'),
 
 -- Tutorial 2
 ('Advanced JavaScript ES6+ Features', 'javascript-es6-advanced', 'Master modern JavaScript with ES6+ features including async/await, modules, and more', 
 '<h2>Modern JavaScript</h2><p>JavaScript has evolved tremendously. This course covers all the latest ES6+ features that every developer should know.</p><h2>Topics Covered</h2><ul><li>Arrow functions and lexical this</li><li>Destructuring and spread operators</li><li>Promises and async/await</li><li>ES6 modules</li><li>Classes and inheritance</li></ul><h2>Practical Applications</h2><p>Learn how to write cleaner, more efficient code using modern JavaScript syntax. Build real-world applications using async programming patterns.</p>', 
-'js-es6-thumb.jpg', 'https://example.com/videos/js-es6.mp4', 1, 2, 'advanced', 180, 'published', 2340, '2024-01-20 14:30:00'),
+'thumb-javascript.svg', 'https://www.youtube.com/embed/PkZNo7MFNFg', 1, 2, 'advanced', 180, 'published', 2340, '2024-01-20 14:30:00'),
 
 -- Tutorial 3
 ('Database Design Fundamentals', 'database-design-fundamentals', 'Learn how to design efficient and scalable databases with normalization and best practices', 
 '<h2>Database Design Principles</h2><p>Good database design is the foundation of any successful application. This tutorial teaches you how to create efficient, scalable database schemas.</p><h2>Key Concepts</h2><ul><li>Entity Relationship Diagrams (ERD)</li><li>Normalization (1NF, 2NF, 3NF)</li><li>Primary and foreign keys</li><li>Indexing strategies</li><li>Data integrity</li></ul><h2>Hands-On Practice</h2><p>Work through real-world scenarios and learn to avoid common database design pitfalls.</p>', 
-'db-design-thumb.jpg', NULL, 2, 3, 'beginner', 150, 'published', 1876, '2024-02-01 09:00:00'),
+'thumb-database.svg', NULL, 2, 3, 'beginner', 150, 'published', 1876, '2024-02-01 09:00:00'),
 
 -- Tutorial 4
 ('SQL Query Optimization Techniques', 'sql-optimization', 'Speed up your database queries with indexing, query optimization, and performance tuning', 
 '<h2>Database Performance</h2><p>Learn advanced techniques to make your SQL queries lightning fast.</p><h2>Topics</h2><ul><li>Understanding EXPLAIN plans</li><li>Index types and strategies</li><li>Query rewriting techniques</li><li>Join optimization</li><li>Caching strategies</li></ul><h2>Real-World Examples</h2><p>See how to optimize real queries from slow to fast with concrete examples.</p>', 
-'sql-opt-thumb.jpg', 'https://example.com/videos/sql-optimization.mp4', 2, 3, 'intermediate', 120, 'published', 2890, '2024-02-10 11:00:00'),
+'thumb-sql-opt.svg', 'https://www.youtube.com/embed/HXV3zeQKqGY', 2, 3, 'intermediate', 120, 'published', 2890, '2024-02-10 11:00:00'),
 
 -- Tutorial 5
 ('Python for Data Science', 'python-data-science', 'Use Python libraries like Pandas, NumPy, and Matplotlib for data analysis and visualization', 
 '<h2>Data Science with Python</h2><p>Python is the go-to language for data science. Learn the essential libraries and techniques.</p><h2>Libraries Covered</h2><ul><li>NumPy for numerical computing</li><li>Pandas for data manipulation</li><li>Matplotlib for visualization</li><li>Data cleaning and preprocessing</li></ul><h2>Projects</h2><p>Build real data analysis projects and create stunning visualizations.</p>', 
-'python-ds-thumb.jpg', 'https://example.com/videos/python-data-science.mp4', 3, 4, 'intermediate', 200, 'published', 3456, '2024-02-15 13:00:00'),
+'thumb-python.svg', 'https://www.youtube.com/embed/rfscVS0vtbw', 3, 4, 'intermediate', 200, 'published', 3456, '2024-02-15 13:00:00'),
 
 -- Tutorial 6
 ('Machine Learning with Python', 'machine-learning-python', 'Build your first machine learning models using scikit-learn and TensorFlow', 
 '<h2>Introduction to Machine Learning</h2><p>Start your journey into AI and machine learning with practical, hands-on examples.</p><h2>What You Will Build</h2><ul><li>Classification models</li><li>Regression algorithms</li><li>Neural networks basics</li><li>Model evaluation techniques</li></ul><h2>Prerequisites</h2><p>Basic Python knowledge required. We will guide you through all ML concepts from scratch.</p>', 
-'ml-python-thumb.jpg', 'https://example.com/videos/machine-learning.mp4', 5, 4, 'advanced', 300, 'published', 4123, '2024-03-01 10:00:00'),
+'thumb-ml.svg', 'https://www.youtube.com/embed/tPYj3fFJGjk', 5, 4, 'advanced', 300, 'published', 4123, '2024-03-01 10:00:00'),
 
 -- Tutorial 7
 ('React Native Mobile App Development', 'react-native-mobile', 'Build cross-platform mobile apps with React Native for iOS and Android', 
 '<h2>Mobile Development Made Easy</h2><p>Learn to build professional mobile apps using JavaScript and React Native.</p><h2>Course Outline</h2><ul><li>React Native setup</li><li>Components and styling</li><li>Navigation patterns</li><li>API integration</li><li>Publishing to app stores</li></ul><h2>Build Real Apps</h2><p>Create actual mobile applications that run on both iOS and Android devices.</p>', 
-'react-native-thumb.jpg', NULL, 4, 2, 'intermediate', 250, 'published', 2567, '2024-03-10 15:00:00'),
+'thumb-react-native.svg', NULL, 4, 2, 'intermediate', 250, 'published', 2567, '2024-03-10 15:00:00'),
 
 -- Tutorial 8
 ('AWS Cloud Essentials', 'aws-cloud-essentials', 'Get started with Amazon Web Services including EC2, S3, and RDS', 
 '<h2>Cloud Computing with AWS</h2><p>Master the fundamentals of cloud computing using Amazon Web Services.</p><h2>Services Covered</h2><ul><li>EC2 - Virtual servers</li><li>S3 - Object storage</li><li>RDS - Managed databases</li><li>Lambda - Serverless computing</li><li>IAM - Security and access</li></ul><h2>Hands-On Labs</h2><p>Deploy real applications to AWS cloud infrastructure.</p>', 
-'aws-thumb.jpg', 'https://example.com/videos/aws-essentials.mp4', 6, 3, 'beginner', 180, 'published', 3789, '2024-03-20 12:00:00'),
+'thumb-aws.svg', 'https://www.youtube.com/embed/3hLmDS179YE', 6, 3, 'beginner', 180, 'published', 3789, '2024-03-20 12:00:00'),
 
 -- Tutorial 9
 ('RESTful API Design Best Practices', 'restful-api-design', 'Design clean, scalable, and secure REST APIs for your applications', 
 '<h2>API Design Principles</h2><p>Learn industry-standard practices for building robust RESTful APIs.</p><h2>Topics</h2><ul><li>REST architecture principles</li><li>HTTP methods and status codes</li><li>Authentication (JWT, OAuth)</li><li>API versioning strategies</li><li>Documentation with Swagger</li></ul><h2>Build Your API</h2><p>Create a production-ready API following best practices.</p>', 
-'rest-api-thumb.jpg', 'https://example.com/videos/rest-api.mp4', 1, 2, 'intermediate', 140, 'published', 2145, '2024-03-25 09:30:00'),
+'thumb-rest-api.svg', 'https://www.youtube.com/embed/SLwpqD8n3d0', 1, 2, 'intermediate', 140, 'published', 2145, '2024-03-25 09:30:00'),
 
 -- Tutorial 10
 ('Git & GitHub for Beginners', 'git-github-beginners', 'Master version control with Git and collaborate using GitHub', 
 '<h2>Version Control Essentials</h2><p>Every developer needs to know Git. This tutorial teaches you everything from basics to collaboration.</p><h2>Learn Git</h2><ul><li>Git basics and workflow</li><li>Branching and merging</li><li>Resolving conflicts</li><li>GitHub collaboration</li><li>Pull requests and code reviews</li></ul><h2>Team Workflows</h2><p>Understand how professional teams use Git in real projects.</p>', 
-'git-github-thumb.jpg', NULL, 3, 4, 'beginner', 90, 'published', 5234, '2024-04-01 10:00:00'),
+'thumb-git.svg', NULL, 3, 4, 'beginner', 90, 'published', 5234, '2024-04-01 10:00:00'),
 
 -- Tutorial 11
 ('Building Responsive Websites with CSS Grid', 'css-grid-responsive', 'Create modern, responsive layouts using CSS Grid and Flexbox', 
 '<h2>Modern CSS Layouts</h2><p>CSS Grid is a game-changer for web layouts. Learn to build beautiful, responsive designs.</p><h2>What You Will Master</h2><ul><li>CSS Grid fundamentals</li><li>Grid template areas</li><li>Responsive design patterns</li><li>Flexbox integration</li><li>Real-world layouts</li></ul><h2>Projects</h2><p>Build portfolio sites, dashboards, and magazine-style layouts.</p>', 
-'css-grid-thumb.jpg', 'https://example.com/videos/css-grid.mp4', 1, 2, 'beginner', 110, 'published', 1987, '2024-04-05 14:00:00'),
+'thumb-css-grid.svg', 'https://www.youtube.com/embed/1Rs2ND1ryYc', 1, 2, 'beginner', 110, 'published', 1987, '2024-04-05 14:00:00'),
 
 -- Tutorial 12
 ('Node.js Backend Development', 'nodejs-backend-dev', 'Build scalable backend applications with Node.js and Express', 
 '<h2>Server-Side JavaScript</h2><p>Learn to build powerful backend systems using Node.js and Express framework.</p><h2>Course Content</h2><ul><li>Node.js fundamentals</li><li>Express.js framework</li><li>RESTful API development</li><li>Database integration</li><li>Authentication and security</li></ul><h2>Full-Stack JavaScript</h2><p>Use JavaScript on both frontend and backend for complete applications.</p>', 
-'nodejs-thumb.jpg', 'https://example.com/videos/nodejs-backend.mp4', 1, 3, 'intermediate', 220, 'published', 3012, '2024-04-10 11:00:00'),
+'thumb-nodejs.svg', 'https://www.youtube.com/embed/Oe421EPjeBE', 1, 3, 'intermediate', 220, 'published', 3012, '2024-04-10 11:00:00'),
 
 -- Tutorial 13
 ('Docker Containerization for Developers', 'docker-containerization', 'Learn Docker to containerize and deploy your applications efficiently', 
 '<h2>Containerization Made Simple</h2><p>Docker revolutionizes how we deploy applications. Learn container technology from scratch.</p><h2>Topics</h2><ul><li>Docker basics and architecture</li><li>Creating Dockerfiles</li><li>Docker Compose</li><li>Container orchestration</li><li>Deployment strategies</li></ul><h2>DevOps Skills</h2><p>Gain essential DevOps skills that are in high demand in the industry.</p>', 
-'docker-thumb.jpg', NULL, 6, 3, 'intermediate', 160, 'published', 2678, '2024-04-15 13:00:00'),
+'thumb-docker.svg', NULL, 6, 3, 'intermediate', 160, 'published', 2678, '2024-04-15 13:00:00'),
 
 -- Tutorial 14
 ('Introduction to MongoDB', 'intro-mongodb', 'Get started with NoSQL databases using MongoDB', 
 '<h2>NoSQL with MongoDB</h2><p>Learn the most popular NoSQL database and when to use it over traditional SQL databases.</p><h2>Learn MongoDB</h2><ul><li>NoSQL concepts</li><li>Document-based storage</li><li>CRUD operations</li><li>Aggregation framework</li><li>Indexing and performance</li></ul><h2>Build Applications</h2><p>Integrate MongoDB with Node.js and build modern web applications.</p>', 
-'mongodb-thumb.jpg', 'https://example.com/videos/mongodb-intro.mp4', 2, 3, 'beginner', 130, 'published', 2234, '2024-04-20 10:30:00'),
+'thumb-mongodb.svg', 'https://www.youtube.com/embed/c2M-rlkkT5o', 2, 3, 'beginner', 130, 'published', 2234, '2024-04-20 10:30:00'),
 
 -- Tutorial 15
 ('Vue.js 3 Complete Guide', 'vuejs-3-guide', 'Build modern web applications with Vue.js 3 and the Composition API', 
 '<h2>Modern Frontend Framework</h2><p>Vue.js 3 brings powerful features and improved performance. Learn the latest version.</p><h2>Course Outline</h2><ul><li>Vue 3 fundamentals</li><li>Composition API</li><li>Component communication</li><li>State management with Pinia</li><li>Vue Router</li></ul><h2>Build Real Apps</h2><p>Create interactive single-page applications with Vue.js 3.</p>', 
-'vuejs-thumb.jpg', 'https://example.com/videos/vuejs-3.mp4', 1, 2, 'intermediate', 195, 'published', 1823, '2024-04-25 15:00:00');
+'thumb-vuejs.svg', 'https://www.youtube.com/embed/4deVCNJq3qc', 1, 2, 'intermediate', 195, 'published', 1823, '2024-04-25 15:00:00');
 
 -- ----------------------------------------------------------------------------
 -- sample tags
@@ -595,15 +595,15 @@ INSERT INTO dbProj_user_activity (user_id, tutorial_id, activity_type) VALUES
 -- sample media files
 -- ----------------------------------------------------------------------------
 INSERT INTO dbProj_tutorial_media (tutorial_id, media_type, file_name, file_path, file_size) VALUES
-(1, 'image', 'php-syntax-example.png', 'uploads/tutorials/1/php-syntax-example.png', 245),
+(1, 'image', 'php-syntax-example.svg', 'tutorials/1/php-syntax-example.svg', 245),
 (1, 'document', 'php-cheatsheet.pdf', 'uploads/tutorials/1/php-cheatsheet.pdf', 1240),
-(2, 'image', 'es6-features-diagram.png', 'uploads/tutorials/2/es6-features-diagram.png', 312),
-(3, 'image', 'erd-example-ecommerce.png', 'uploads/tutorials/3/erd-example-ecommerce.png', 428),
+(2, 'image', 'es6-features-diagram.svg', 'tutorials/2/es6-features-diagram.svg', 312),
+(3, 'image', 'erd-example-ecommerce.svg', 'tutorials/3/erd-example-ecommerce.svg', 428),
 (4, 'document', 'sql-optimization-guide.pdf', 'uploads/tutorials/4/sql-optimization-guide.pdf', 987),
-(5, 'image', 'pandas-dataframe-operations.png', 'uploads/tutorials/5/pandas-dataframe-operations.png', 356),
-(6, 'image', 'neural-network-architecture.png', 'uploads/tutorials/6/neural-network-architecture.png', 512),
-(7, 'image', 'react-native-components.png', 'uploads/tutorials/7/react-native-components.png', 289),
-(8, 'image', 'aws-architecture-diagram.png', 'uploads/tutorials/8/aws-architecture-diagram.png', 467),
+(5, 'image', 'pandas-dataframe-ops.svg', 'tutorials/5/pandas-dataframe-ops.svg', 356),
+(6, 'image', 'neural-network-arch.svg', 'tutorials/6/neural-network-arch.svg', 512),
+(7, 'image', 'react-native-comps.svg', 'tutorials/7/react-native-comps.svg', 289),
+(8, 'image', 'aws-architecture.svg', 'tutorials/8/aws-architecture.svg', 467),
 (9, 'document', 'api-documentation-template.pdf', 'uploads/tutorials/9/api-documentation-template.pdf', 654);
 
 -- ============================================================================
@@ -642,70 +642,6 @@ FROM dbProj_tutorials
 WHERE MATCH(title, content) AGAINST('javascript')
 ORDER BY relevance DESC
 LIMIT 5;
-
--- ============================================================================
--- FIX: per-topic thumbnail SVGs — files must exist in uploads/
--- ============================================================================
-UPDATE dbProj_tutorials SET thumbnail = 'thumb-php-mysql.svg'       WHERE slug = 'php-mysql-beginners';
-UPDATE dbProj_tutorials SET thumbnail = 'thumb-javascript.svg'      WHERE slug = 'javascript-es6-advanced';
-UPDATE dbProj_tutorials SET thumbnail = 'thumb-database.svg'        WHERE slug = 'database-design-fundamentals';
-UPDATE dbProj_tutorials SET thumbnail = 'thumb-sql-opt.svg'         WHERE slug = 'sql-optimization';
-UPDATE dbProj_tutorials SET thumbnail = 'thumb-python.svg'          WHERE slug = 'python-data-science';
-UPDATE dbProj_tutorials SET thumbnail = 'thumb-ml.svg'              WHERE slug = 'machine-learning-python';
-UPDATE dbProj_tutorials SET thumbnail = 'thumb-react-native.svg'    WHERE slug = 'react-native-mobile';
-UPDATE dbProj_tutorials SET thumbnail = 'thumb-aws.svg'             WHERE slug = 'aws-cloud-essentials';
-UPDATE dbProj_tutorials SET thumbnail = 'thumb-rest-api.svg'        WHERE slug = 'restful-api-design';
-UPDATE dbProj_tutorials SET thumbnail = 'thumb-git.svg'             WHERE slug = 'git-github-beginners';
-UPDATE dbProj_tutorials SET thumbnail = 'thumb-css-grid.svg'        WHERE slug = 'css-grid-responsive';
-UPDATE dbProj_tutorials SET thumbnail = 'thumb-nodejs.svg'          WHERE slug = 'nodejs-backend-dev';
-UPDATE dbProj_tutorials SET thumbnail = 'thumb-docker.svg'          WHERE slug = 'docker-containerization';
-UPDATE dbProj_tutorials SET thumbnail = 'thumb-mongodb.svg'         WHERE slug = 'intro-mongodb';
-UPDATE dbProj_tutorials SET thumbnail = 'thumb-vuejs.svg'           WHERE slug = 'vuejs-3-guide';
-
--- ============================================================================
--- FIX: real YouTube embed URLs — slug match fixes earlier bug
--- ============================================================================
-UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/2pWv7GOvuf0'
-    WHERE slug = 'php-mysql-beginners';
-UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/PkZNo7MFNFg'
-    WHERE slug = 'javascript-es6-advanced';
-UPDATE dbProj_tutorials SET video_url = NULL
-    WHERE slug = 'database-design-fundamentals';
-UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/HXV3zeQKqGY'
-    WHERE slug = 'sql-optimization';
-UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/rfscVS0vtbw'
-    WHERE slug = 'python-data-science';
-UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/tPYj3fFJGjk'
-    WHERE slug = 'machine-learning-python';
-UPDATE dbProj_tutorials SET video_url = NULL
-    WHERE slug = 'react-native-mobile';
-UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/3hLmDS179YE'
-    WHERE slug = 'aws-cloud-essentials';
-UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/SLwpqD8n3d0'
-    WHERE slug = 'restful-api-design';
-UPDATE dbProj_tutorials SET video_url = NULL
-    WHERE slug = 'git-github-beginners';
-UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/1Rs2ND1ryYc'
-    WHERE slug = 'css-grid-responsive';
-UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/Oe421EPjeBE'
-    WHERE slug = 'nodejs-backend-dev';
-UPDATE dbProj_tutorials SET video_url = NULL
-    WHERE slug = 'docker-containerization';
-UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/c2M-rlkkT5o'
-    WHERE slug = 'intro-mongodb';
-UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/4deVCNJq3qc'
-    WHERE slug = 'vuejs-3-guide';
-
--- ============================================================================
--- FIX: update media paths to .svg so browser can serve them
--- ============================================================================
-UPDATE dbProj_tutorial_media SET file_name='php-syntax-example.svg',    file_path='tutorials/1/php-syntax-example.svg'    WHERE file_name='php-syntax-example.png';
-UPDATE dbProj_tutorial_media SET file_name='es6-features-diagram.svg',  file_path='tutorials/2/es6-features-diagram.svg'  WHERE file_name='es6-features-diagram.png';
-UPDATE dbProj_tutorial_media SET file_name='erd-example-ecommerce.svg', file_path='tutorials/3/erd-example-ecommerce.svg' WHERE file_name='erd-example-ecommerce.png';
-UPDATE dbProj_tutorial_media SET file_name='pandas-dataframe-ops.svg',  file_path='tutorials/5/pandas-dataframe-ops.svg'  WHERE file_name='pandas-dataframe-operations.png';
-UPDATE dbProj_tutorial_media SET file_name='neural-network-arch.svg',   file_path='tutorials/6/neural-network-arch.svg'   WHERE file_name='neural-network-architecture.png';
-UPDATE dbProj_tutorial_media SET file_name='react-native-comps.svg',    file_path='tutorials/7/react-native-comps.svg'    WHERE file_name='react-native-components.png';
-UPDATE dbProj_tutorial_media SET file_name='aws-architecture.svg',      file_path='tutorials/8/aws-architecture.svg'      WHERE file_name='aws-architecture-diagram.png';
 
 -- ============================================================================
 -- SETUP COMPLETE
