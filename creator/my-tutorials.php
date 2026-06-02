@@ -149,7 +149,7 @@ usort($my_tutorials, function($a, $b) use ($sort) {
                                         <a href="<?= SITE_URL ?>/viewer/tutorial-view.php?slug=<?= urlencode($tut['slug']) ?>" class="btn btn-icon" title="View" target="_blank">
                                             <i class="fas fa-external-link-alt"></i>
                                         </a>
-                                        <button class="btn btn-icon btn-danger" title="Delete" onclick="deleteTutorial(<?= (int)$tut['tutorial_id'] ?>, <?= json_encode($tut['title']) ?>)">
+                                        <button class="btn btn-icon btn-danger" title="Delete" onclick="deleteTutorial(<?= (int)$tut['tutorial_id'] ?>, <?= htmlspecialchars(json_encode($tut['title']), ENT_QUOTES, 'UTF-8') ?>)">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>

@@ -3,10 +3,8 @@
 require_once '../config/config.php';
 require_once '../classes/Tutorial.php';
 
-// creators use their own area
-if (isLoggedIn() && isCreator()) {
-    redirect('creator/dashboard.php');
-}
+// creators can open a tutorial in read-only preview
+// they just dont get the rating comment or complete forms
 
 // resolve visitor type and id
 $is_logged_in       = isLoggedIn() && (isViewer() || isAdmin());
@@ -137,6 +135,19 @@ if ($is_logged_in && $current_user_id > 0) {
     $rStmt->execute();
     $rRow        = $rStmt->fetch();
     $user_rating = $rRow ? (int)$rRow['rating'] : 0;
+}
+
+// check if this viewer already completed the tutorial
+$already_completed = false;
+if (isLoggedIn() && hasRole('viewer') && $current_user_id > 0) {
+    $cStmt = $conn->prepare(
+        "SELECT 1 FROM dbProj_user_activity
+         WHERE user_id = :uid AND tutorial_id = :tid AND activity_type = 'complete' LIMIT 1"
+    );
+    $cStmt->bindParam(':uid', $current_user_id,         PDO::PARAM_INT);
+    $cStmt->bindParam(':tid', $tutorial['tutorial_id'], PDO::PARAM_INT);
+    $cStmt->execute();
+    $already_completed = (bool)$cStmt->fetchColumn();
 }
 
 // prep page vars
@@ -306,12 +317,14 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
                 </div>
 
                 <?php if (isLoggedIn() && hasRole('viewer')): ?>
-                <div class="mark-complete-section" style="margin-top: 20px;">
+                <div class="mark-complete-section" style="margin-top: 20px; display:flex; align-items:center; gap:12px;">
                     <button id="markCompleteBtn" class="btn btn-success"
                         data-tutorial="<?= (int)($tutorial['tutorial_id'] ?? 0) ?>">
                         <i class="fas fa-check-circle"></i> Mark as Complete
                     </button>
-                    <span id="completeMsg" style="display:none;color:green;margin-left:10px;">Marked as complete!</span>
+                    <span id="completeMsg" style="<?= $already_completed ? '' : 'display:none;' ?> color:#10b981; font-weight:600;">
+                        <i class="fas fa-check"></i> Saved to My Learning
+                    </span>
                 </div>
                 <?php endif; ?>
 

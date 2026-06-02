@@ -87,6 +87,24 @@ try {
     <link rel="stylesheet" href="<?= asset('css/viewer.css') ?>?v=<?= $css_version ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <meta name="csrf-token" content="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+    <style>
+        /* equal height review and remove buttons with spacing */
+        .card-footer { gap: 10px; align-items: stretch; }
+        .card-footer .btn-sm { padding: 9px 14px; font-size: 13px; }
+        .card-footer .btn-primary { flex: 1; }
+        /* remove button reads as a neutral destructive action */
+        .card-footer .btn-outline {
+            flex: 0 0 auto;
+            color: var(--c-text-3);
+            border: 1.5px solid var(--c-border);
+            background: var(--c-surface);
+        }
+        .card-footer .btn-outline:hover {
+            background: var(--c-danger-bg);
+            border-color: var(--c-danger);
+            color: var(--c-danger);
+        }
+    </style>
 </head>
 <body>
     <?php include '../includes/viewer-nav.php'; ?>
