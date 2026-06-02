@@ -91,14 +91,7 @@ $draft_count     = count(array_filter($my_tutorials, fn($t) => $t['status'] === 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 20px; margin-bottom: 28px; }
-        .stat-card { background:#fff; border-radius:12px; padding:22px 20px; box-shadow:0 2px 8px rgba(0,0,0,.07); display:flex; align-items:center; gap:14px; }
-        .stat-icon { width:50px; height:50px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; color:#fff; flex-shrink:0; }
-        .stat-icon.blue   { background:linear-gradient(135deg,#667eea,#764ba2); }
-        .stat-icon.green  { background:linear-gradient(135deg,#27ae60,#1abc9c); }
-        .stat-icon.orange { background:linear-gradient(135deg,#f39c12,#e67e22); }
-        .stat-icon.purple { background:linear-gradient(135deg,#8e44ad,#9b59b6); }
-        .stat-icon.teal   { background:linear-gradient(135deg,#1abc9c,#16a085); }
-        .stat-icon.red    { background:linear-gradient(135deg,#e74c3c,#c0392b); }
+        /* stat-card and stat-icon colour variants now defined in creator.css — no inline override needed */
         .stat-info h3 { font-size:24px; font-weight:700; margin:0 0 2px; color:#2c3e50; }
         .stat-info p  { font-size:12px; color:#7f8c8d; margin:0; }
         .two-col { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:24px; }

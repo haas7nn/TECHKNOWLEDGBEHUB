@@ -73,20 +73,32 @@ body {
 
 /* Logo/Brand */
 .auth-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
     text-align: center;
     margin-bottom: 30px;
+    text-decoration: none;
 }
 
 .auth-logo i {
-    font-size: 50px;
+    font-size: 36px;
     color: var(--primary-color);
-    margin-bottom: 10px;
 }
 
 .auth-logo h1 {
-    font-size: 28px;
+    font-size: 24px;
     color: var(--text-dark);
-    font-weight: 700;
+    font-weight: 800;
+    margin: 0;
+}
+
+/* Brand text next to icon — used as <span> in login/register/forgot */
+.auth-logo span {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-dark);
 }
 
 /* Header */
@@ -420,6 +432,23 @@ body {
 
 .auth-side-content {
     max-width: 400px;
+}
+
+/* Brand name + icon displayed at the top of the gradient side panel */
+.auth-side-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 36px;
+}
+.auth-side-brand i {
+    font-size: 40px;
+    color: rgba(255,255,255,0.9);
+}
+.auth-side-brand span {
+    font-size: 24px;
+    font-weight: 800;
+    color: #ffffff;
 }
 
 .auth-side-content h2 {

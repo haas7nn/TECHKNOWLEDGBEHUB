@@ -554,6 +554,33 @@ section h2 i { color: #667eea; }
 
 .card-thumbnail img { width: 100%; height: 100%; object-fit: cover; }
 
+/* Placeholder icon shown when a tutorial has no thumbnail */
+.thumb-icon {
+    font-size: 44px;
+    color: #c3cfe0;
+}
+/* Placeholder div (used in continue-learning cards) */
+.thumb-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 38px;
+    color: #c3cfe0;
+    background: linear-gradient(135deg, #f0f2f8, #e8ecf1);
+}
+/* Media attachment badge shown on tutorial cards */
+.media-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    color: #a0aec0;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
 .difficulty-badge {
     position: absolute;
     top: 10px; right: 10px;
@@ -686,9 +713,17 @@ section h2 i { color: #667eea; }
 
 .filters-form {
     display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Row inside the filter form — aligns controls horizontally */
+.filter-row {
+    display: flex;
     gap: 12px;
     align-items: center;
     flex-wrap: wrap;
+    width: 100%;
 }
 
 .search-box-large {

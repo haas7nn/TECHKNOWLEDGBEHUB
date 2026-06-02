@@ -96,10 +96,11 @@ $categories = $categoryObj->getAllWithCount();
                 <?php csrfField(); ?>
                 <input type="hidden" name="action" value="add">
                 <div style="flex:1;min-width:200px;">
-                    <label for="new_name" style="display:block;margin-bottom:6px;font-size:.875rem;color:#a0aec0;">Category Name</label>
+                    <label for="new_name" style="display:block;margin-bottom:6px;font-size:.875rem;color:#4a5568;font-weight:600;">Category Name</label>
                     <input type="text" id="new_name" name="name" placeholder="e.g. Web Development"
-                           required maxlength="100"
-                           style="width:100%;padding:8px 12px;background:#2d3748;border:1px solid #4a5568;border-radius:6px;color:#e2e8f0;font-size:.9rem;">
+                           required maxlength="100" class="form-control"
+                           style="width:100%;padding:9px 12px;background:#fff;border:1.5px solid #e0e0e0;border-radius:8px;color:#2d3748;font-size:.9rem;transition:border-color .2s;"
+                           onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#e0e0e0'">
                 </div>
                 <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Add Category</button>
             </form>

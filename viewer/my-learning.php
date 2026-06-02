@@ -176,7 +176,7 @@ try {
                                 <div class="progress-bar">
                                     <div class="progress-fill"
                                          style="width:<?= (int)$tut['progress'] ?>%;
-                                                background:<?= $tut['is_completed'] ? '#38a169' : 'var(--clr-primary)' ?>;">
+                                                background:<?= $tut['is_completed'] ? 'var(--c-success,#10b981)' : 'var(--c-primary,#667eea)' ?>;">
                                     </div>
                                 </div>
                                 <span class="progress-text">

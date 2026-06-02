@@ -499,13 +499,13 @@ a:hover {
     color: white;
 }
 
-.btn-block {
-    width: 100%;
-}
-
-.btn-large {
-    padding: 16px 32px;
-    font-size: 16px;
+.btn-block { width: 100%; }
+.btn-large  { padding: 16px 32px; font-size: 16px; }
+/* Small button variant — used in help-box and other compact areas */
+.btn-small, .btn-sm {
+    padding: 7px 14px;
+    font-size: 13px;
+    border-radius: var(--radius-sm);
 }
 
 /* ==================== STATS GRID ==================== */
@@ -540,7 +540,18 @@ a:hover {
     justify-content: center;
     font-size: 28px;
     color: white;
+    flex-shrink: 0;
 }
+
+/* Colour variants — used by dashboard, analytics, and other creator pages */
+.stat-icon.blue,   .si-blue   { background: linear-gradient(135deg, #667eea, #764ba2); }
+.stat-icon.green,  .si-green  { background: linear-gradient(135deg, #27ae60, #1abc9c); }
+.stat-icon.orange, .si-orange { background: linear-gradient(135deg, #f39c12, #e67e22); }
+.stat-icon.purple, .si-purple { background: linear-gradient(135deg, #8e44ad, #9b59b6); }
+.stat-icon.teal,   .si-teal   { background: linear-gradient(135deg, #1abc9c, #16a085); }
+.stat-icon.red,    .si-red    { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+.stat-icon.pink,   .si-pink   { background: linear-gradient(135deg, #fd79a8, #e84393); }
+.stat-icon.gold,   .si-gold   { background: linear-gradient(135deg, #f1c40f, #e67e22); }
 
 .stat-details {
     flex: 1;
@@ -1399,21 +1410,8 @@ textarea.form-control {
         max-width: 100%;
     }
 }
-/* Creator Navbar */
-.creator-navbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 70px;
-    background: #fff;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 30px;
-    z-index: 1000;
-}
+/* creator-navbar was replaced by viewer-navbar from shared.css — kept as alias only */
+.creator-navbar { /* alias for .viewer-navbar — no extra rules needed */ }
 
 .navbar-brand a {
     display: flex;
@@ -1508,10 +1506,4 @@ textarea.form-control {
     margin: 5px 0;
 }
 
-/* Dashboard Container */
-.dashboard-container {
-    display: flex;
-    min-height: 100vh;
-    padding-top: 70px;
-    background: #f8f9fa;
-}
+/* duplicate .dashboard-container removed — the canonical definition is at line ~287 */

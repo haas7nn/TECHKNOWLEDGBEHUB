@@ -102,6 +102,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 <div class="auth-wrapper">
+    <!-- auth-side must be a direct child of auth-wrapper (sibling of auth-container), not inside it -->
+    <div class="auth-side">
+        <div class="auth-side-content">
+            <div class="auth-side-brand">
+                <i class="fas fa-graduation-cap"></i>
+                <span><?= SITE_NAME ?></span>
+            </div>
+            <h2>Create a Strong Password</h2>
+            <p>Your account security matters. Choose a password you haven't used before.</p>
+            <ul class="features">
+                <li class="feature-item"><i class="fas fa-check-circle"></i><span>At least 8 characters</span></li>
+                <li class="feature-item"><i class="fas fa-check-circle"></i><span>One uppercase letter</span></li>
+                <li class="feature-item"><i class="fas fa-check-circle"></i><span>One number</span></li>
+                <li class="feature-item"><i class="fas fa-check-circle"></i><span>Avoid common words</span></li>
+            </ul>
+        </div>
+    </div>
     <div class="auth-container login-container">
         <div class="auth-box">
 
@@ -188,28 +205,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
 
         </div><!-- /auth-box -->
-
-        <div class="auth-side">
-            <div class="auth-side-content">
-                <i class="fas fa-shield-alt" style="font-size:60px; color:rgba(255,255,255,.3); margin-bottom:20px;"></i>
-                <h2>Create a Strong Password</h2>
-                <ul style="text-align:left; margin-top:20px; list-style:none; padding:0;">
-                    <li style="padding:8px 0; color:rgba(255,255,255,.85);">
-                        <i class="fas fa-check-circle" style="margin-right:8px;"></i> At least 8 characters
-                    </li>
-                    <li style="padding:8px 0; color:rgba(255,255,255,.85);">
-                        <i class="fas fa-check-circle" style="margin-right:8px;"></i> One uppercase letter
-                    </li>
-                    <li style="padding:8px 0; color:rgba(255,255,255,.85);">
-                        <i class="fas fa-check-circle" style="margin-right:8px;"></i> One number
-                    </li>
-                    <li style="padding:8px 0; color:rgba(255,255,255,.85);">
-                        <i class="fas fa-check-circle" style="margin-right:8px;"></i> Avoid common words
-                    </li>
-                </ul>
-            </div>
-        </div>
-
     </div><!-- /auth-container -->
 </div><!-- /auth-wrapper -->
 
