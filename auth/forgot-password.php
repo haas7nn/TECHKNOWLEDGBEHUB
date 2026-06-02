@@ -13,6 +13,7 @@ if (isLoggedIn()) {
 $page_title = 'Forgot Password';
 $error      = '';
 $success    = '';
+$reset_link = '';
 
 // handle POST submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -31,14 +32,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // same response whether email exists or not — prevents email enumeration
             if ($user && $user['status'] === 'active') {
-                // session-based token — no email sent in this demo
+                // session-based token — no mail server in this demo so we show the link on-screen
                 $token = bin2hex(random_bytes(32));
                 $_SESSION['reset_token']      = $token;
                 $_SESSION['reset_user_id']    = $user['user_id'];
                 $_SESSION['reset_expires_at'] = time() + 900; // 15 minutes
+                $reset_link = SITE_URL . '/auth/reset-password.php?token=' . urlencode($token);
             }
 
-            $success = 'If your email is registered, you will receive a password reset link.';
+            $success = 'If your email is registered, your password reset link will appear below.';
         }
     }
 }
@@ -99,6 +101,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <i class="fas fa-check-circle"></i>
                     <span><?= e($success) ?></span>
                 </div>
+                <?php if (!empty($reset_link)): ?>
+                <!-- demo convenience link since there is no mail server -->
+                <div class="alert alert-info" style="flex-direction:column; align-items:stretch; gap:10px; margin-top:12px;">
+                    <span><i class="fas fa-flask"></i> Demo mode — no mail server, so reset directly using this link</span>
+                    <a href="<?= e($reset_link) ?>" class="btn btn-primary btn-block">
+                        <i class="fas fa-key"></i> Reset My Password
+                    </a>
+                </div>
+                <?php endif; ?>
                 <div style="text-align:center; margin-top:10px;">
                     <a href="login.php" class="link">
                         <i class="fas fa-arrow-left"></i> Back to Login

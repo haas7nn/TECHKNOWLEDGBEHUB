@@ -45,6 +45,9 @@ if (isset($conn)) {
         <a href="<?= SITE_URL ?>/viewer/my-learning.php" class="nav-link">
             <i class="fas fa-book-open"></i><span>My Learning</span>
         </a>
+        <a href="<?= SITE_URL ?>/viewer/favorites.php" class="nav-link">
+            <i class="fas fa-heart"></i><span>Favorites</span>
+        </a>
 
         <!-- category dropdown -->
         <?php if (!empty($navCategories)): ?>
@@ -83,6 +86,7 @@ if (isset($conn)) {
             <div class="dropdown-menu" id="viewerDropdownMenu">
                 <a href="<?= SITE_URL ?>/viewer/dashboard.php"   class="dropdown-item"><i class="fas fa-home"></i> Dashboard</a>
                 <a href="<?= SITE_URL ?>/viewer/my-learning.php" class="dropdown-item"><i class="fas fa-graduation-cap"></i> My Learning</a>
+                <a href="<?= SITE_URL ?>/viewer/favorites.php"   class="dropdown-item"><i class="fas fa-heart"></i> My Favorites</a>
                 <div class="dropdown-divider"></div>
                 <a href="<?= SITE_URL ?>/auth/logout.php" class="dropdown-item" style="color:var(--c-danger);"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </div>

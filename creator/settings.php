@@ -23,9 +23,8 @@ if (!$profile) {
 
 $errors  = [];
 
-// load settings from session with defaults
-$settings_key = 'creator_settings_' . $current_user_id;
-$settings = $_SESSION[$settings_key] ?? [
+// load settings from db with defaults
+$defaults = [
     'notify_comments'  => true,
     'notify_ratings'   => true,
     'notify_new_views' => false,
@@ -34,28 +33,25 @@ $settings = $_SESSION[$settings_key] ?? [
     'tutorials_per_page' => 10,
     'default_difficulty' => 'beginner',
 ];
+$settings = array_merge($defaults, $userObj->getPreferences($current_user_id));
 
 // handle settings save
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
     if (!verifyCsrfFromPost()) {
         $errors[] = 'Invalid security token. Please refresh and try again.';
     } else {
-        // read toggle and dropdown values
-        $settings['notify_comments']    = isset($_POST['notify_comments']);
-        $settings['notify_ratings']     = isset($_POST['notify_ratings']);
-        $settings['notify_new_views']   = isset($_POST['notify_new_views']);
-        $settings['profile_public']     = isset($_POST['profile_public']);
-        $settings['show_email']         = isset($_POST['show_email']);
+        // notification + privacy preferences are planned features with no backend yet,
+        // so we deliberately do NOT persist them — only the defaults below actually take effect
         // whitelist page size values
-        $settings['tutorials_per_page'] = in_array((int)($_POST['tutorials_per_page'] ?? 10), [5,10,20,50])
-                                            ? (int)$_POST['tutorials_per_page'] : 10;
+        $pp = (int)($_POST['tutorials_per_page'] ?? 10);
+        $settings['tutorials_per_page'] = in_array($pp, [5, 10, 20, 50], true) ? $pp : 10;
         // whitelist difficulty values
-        $settings['default_difficulty'] = in_array(clean($_POST['default_difficulty'] ?? ''), ['beginner','intermediate','advanced'])
-                                            ? clean($_POST['default_difficulty']) : 'beginner';
+        $df = clean($_POST['default_difficulty'] ?? '');
+        $settings['default_difficulty'] = in_array($df, ['beginner', 'intermediate', 'advanced'], true) ? $df : 'beginner';
 
         if (empty($errors)) {
-            // persist in session no db column for settings
-            $_SESSION[$settings_key] = $settings;
+            // persist to db so settings survive logout
+            $userObj->savePreferences($current_user_id, $settings);
             setFlashMessage('Settings saved successfully!', 'success');
             redirect('creator/settings.php');
         }
@@ -73,8 +69,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
         if (!$current_password || !password_verify($current_password, $profile['password_hash'])) {
             $errors[] = 'Current password is incorrect.';
         } else {
-            // note request admin completes actual deletion
-            setFlashMessage('Account deletion request noted. Please contact an administrator to complete this action.', 'info');
+            // record the request in the user's preferences so an admin can see and action it
+            $prefs = $userObj->getPreferences($current_user_id);
+            $prefs['deletion_requested'] = date('Y-m-d H:i:s');
+            $userObj->savePreferences($current_user_id, $prefs);
+            setFlashMessage('Your account deletion request has been submitted. An administrator will review and process it.', 'success');
             redirect('creator/settings.php');
         }
     }
@@ -99,6 +98,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
         .setting-row:last-of-type { border-bottom: none; }
         .setting-info h4 { font-size: 14px; font-weight: 600; color: #2c3e50; margin: 0 0 3px; }
         .setting-info p  { font-size: 12px; color: #7f8c8d; margin: 0; }
+        /* planned-feature cards are visibly dimmed and badged */
+        .soon-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+                      background: #edf0f7; color: #8a93a6; padding: 3px 9px; border-radius: 999px; margin-left: auto; }
+        .settings-card.is-soon .setting-row { opacity: .55; }
         /* toggle switch styles */
         .toggle-wrap { position: relative; display: inline-block; width: 44px; height: 24px; }
         .toggle-wrap input { opacity: 0; width: 0; height: 0; }
@@ -158,71 +161,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
             <?php csrfField(); ?>
             <input type="hidden" name="save_settings" value="1">
 
-            <!-- notification preferences card with three toggles -->
-            <div class="settings-card">
-                <h2><i class="fas fa-bell" style="color:#f39c12;"></i> Notification Preferences</h2>
+            <!-- notification preferences — planned feature, controls disabled so they don't mislead -->
+            <div class="settings-card is-soon">
+                <h2><i class="fas fa-bell" style="color:#f39c12;"></i> Notification Preferences <span class="soon-badge">Coming soon</span></h2>
 
-                <!-- toggle for comment notifications -->
                 <div class="setting-row">
                     <div class="setting-info">
                         <h4>New Comments</h4>
                         <p>Get notified when someone comments on your tutorial</p>
                     </div>
                     <label class="toggle-wrap">
-                        <input type="checkbox" name="notify_comments" <?= $settings['notify_comments'] ? 'checked' : '' ?>>
+                        <input type="checkbox" disabled>
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
 
-                <!-- toggle for rating notifications -->
                 <div class="setting-row">
                     <div class="setting-info">
                         <h4>New Ratings</h4>
                         <p>Get notified when someone rates your tutorial</p>
                     </div>
                     <label class="toggle-wrap">
-                        <input type="checkbox" name="notify_ratings" <?= $settings['notify_ratings'] ? 'checked' : '' ?>>
+                        <input type="checkbox" disabled>
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
 
-                <!-- toggle for view milestone notifications -->
                 <div class="setting-row">
                     <div class="setting-info">
                         <h4>View Milestones</h4>
                         <p>Get notified at every 100 views milestone</p>
                     </div>
                     <label class="toggle-wrap">
-                        <input type="checkbox" name="notify_new_views" <?= $settings['notify_new_views'] ? 'checked' : '' ?>>
+                        <input type="checkbox" disabled>
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
             </div>
 
-            <!-- privacy settings card with two toggles -->
-            <div class="settings-card">
-                <h2><i class="fas fa-shield-alt" style="color:#27ae60;"></i> Privacy Settings</h2>
+            <!-- privacy settings — planned feature, controls disabled so they don't mislead -->
+            <div class="settings-card is-soon">
+                <h2><i class="fas fa-shield-alt" style="color:#27ae60;"></i> Privacy Settings <span class="soon-badge">Coming soon</span></h2>
 
-                <!-- toggle to make the profile visible to other users -->
                 <div class="setting-row">
                     <div class="setting-info">
                         <h4>Public Profile</h4>
                         <p>Allow other users to see your creator profile</p>
                     </div>
                     <label class="toggle-wrap">
-                        <input type="checkbox" name="profile_public" <?= $settings['profile_public'] ? 'checked' : '' ?>>
+                        <input type="checkbox" disabled>
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
 
-                <!-- toggle to show or hide the email address on the public profile -->
                 <div class="setting-row">
                     <div class="setting-info">
                         <h4>Show Email on Profile</h4>
                         <p>Display your email address on your public profile</p>
                     </div>
                     <label class="toggle-wrap">
-                        <input type="checkbox" name="show_email" <?= $settings['show_email'] ? 'checked' : '' ?>>
+                        <input type="checkbox" disabled>
                         <span class="toggle-slider"></span>
                     </label>
                 </div>

@@ -43,7 +43,7 @@ $offset     = ($page - 1) * $per_page;
 // build dynamic where clause
 $where  = ['1=1'];
 $params = [];
-if ($search)     { $where[] = "(t.title LIKE :s1 OR u.full_name LIKE :s2)"; $params[':s1']="%$search%"; $params[':s2']="%$search%"; }
+if ($search)     { $like = '%' . addcslashes($search, '%_') . '%'; $where[] = "(t.title LIKE :s1 OR u.full_name LIKE :s2)"; $params[':s1']=$like; $params[':s2']=$like; }
 if ($status_f)   { $where[] = "t.status=:status";      $params[':status']  = $status_f; }
 if ($category_f) { $where[] = "t.category_id=:cat_id"; $params[':cat_id']  = $category_f; }
 

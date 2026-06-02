@@ -28,6 +28,7 @@ CREATE TABLE dbProj_users (
     role ENUM('viewer', 'creator', 'admin') DEFAULT 'viewer' NOT NULL,
     profile_picture VARCHAR(255) NULL,
     bio TEXT NULL,
+    preferences TEXT NULL,
     status ENUM('active', 'inactive') DEFAULT 'active' NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     last_login DATETIME NULL,
@@ -202,7 +203,7 @@ CREATE TABLE dbProj_user_activity (
     activity_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     tutorial_id INT NOT NULL,
-    activity_type ENUM('view', 'complete') NOT NULL,
+    activity_type ENUM('view', 'complete', 'favorite') NOT NULL,
     activity_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     
     -- foreign keys
@@ -210,6 +211,10 @@ CREATE TABLE dbProj_user_activity (
         ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (tutorial_id) REFERENCES dbProj_tutorials(tutorial_id)
         ON DELETE CASCADE ON UPDATE CASCADE,
+
+    -- one row per user per tutorial per activity type so INSERT IGNORE truly
+    -- dedupes (first view counts once, one complete, one favorite)
+    UNIQUE KEY uq_user_tutorial_activity (user_id, tutorial_id, activity_type),
 
     INDEX idx_user (user_id),
     INDEX idx_tutorial (tutorial_id),

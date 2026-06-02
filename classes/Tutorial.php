@@ -56,12 +56,21 @@ class Tutorial {
 
             $query = "INSERT INTO " . $this->table . "
                       (title, slug, short_description, content, instructor_id, category_id,
-                       difficulty, duration_minutes, thumbnail, video_url, status, created_at)
+                       difficulty, duration_minutes, thumbnail, video_url, status, created_at, published_at)
                       VALUES
                       (:title, :slug, :short_description, :content, :instructor_id, :category_id,
-                       :difficulty, :duration_minutes, :thumbnail, :video_url, :status, NOW())";
+                       :difficulty, :duration_minutes, :thumbnail, :video_url, :status, NOW(), :published_at)";
 
             $stmt = $this->conn->prepare($query);
+
+            // stamp published_at now if created straight to published
+            // the SetPublishedDate trigger only fires on UPDATE so INSERT must set it here
+            $published_at = (isset($data['status']) && $data['status'] === 'published') ? date('Y-m-d H:i:s') : null;
+            if ($published_at === null) {
+                $stmt->bindValue(':published_at', null, PDO::PARAM_NULL);
+            } else {
+                $stmt->bindValue(':published_at', $published_at, PDO::PARAM_STR);
+            }
 
             $stmt->bindParam(':title', $data['title'], PDO::PARAM_STR);
             $stmt->bindParam(':slug', $slug, PDO::PARAM_STR);
@@ -588,6 +597,21 @@ class Tutorial {
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(':tutorial_id', $tutorial_id, PDO::PARAM_INT);
 
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+
+    // restore an archived tutorial back to draft
+    public function restore($tutorial_id) {
+        $query = "UPDATE " . $this->table . "
+                  SET status = 'draft', updated_at = NOW()
+                  WHERE tutorial_id = :tutorial_id";
+
+        try {
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':tutorial_id', $tutorial_id, PDO::PARAM_INT);
             return $stmt->execute();
         } catch (PDOException $e) {
             return false;

@@ -27,6 +27,13 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <span>My Learning</span>
         </a>
 
+        <!-- favorites link -->
+        <a href="<?= SITE_URL ?>/viewer/favorites.php"
+           class="nav-item <?= $current_page === 'favorites.php' ? 'active' : '' ?>">
+            <i class="fas fa-heart"></i>
+            <span>My Favorites</span>
+        </a>
+
         <div class="nav-divider"></div>
 
         <!-- public search link -->

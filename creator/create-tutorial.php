@@ -2,6 +2,7 @@
 // create tutorial form for instructors
 
 require_once '../includes/auth-check.php';
+require_once '../classes/User.php';
 
 $page_title = 'Create New Tutorial';
 $error = '';
@@ -10,6 +11,11 @@ $success = '';
 // db connect
 $database = new Database();
 $conn = $database->connect();
+
+// load saved creator preferences for sensible form defaults
+$userPrefs = (new User())->getPreferences($current_user_id);
+$pref_difficulty = in_array($userPrefs['default_difficulty'] ?? '', ['beginner','intermediate','advanced'])
+    ? $userPrefs['default_difficulty'] : 'beginner';
 
 // get categories
 $categoriesQuery = "SELECT category_id, category_name FROM dbProj_categories ORDER BY category_name";
@@ -27,7 +33,7 @@ $form_data = [
     'short_description' => '',
     'content'           => '',
     'category_id'       => '',
-    'difficulty'        => 'beginner',
+    'difficulty'        => $pref_difficulty,
     'duration_minutes'  => '',
     'video_url'         => '',
     'status'            => 'draft'
@@ -605,7 +611,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </script>
     <script src="<?= asset('js/creator.js') ?>"></script>
     <script>
-        // preview button opens the tinymce content in a new window (f36)
+        // preview button opens the tinymce content in a new window 
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('previewBtn')?.addEventListener('click', function() {
                 if (typeof tinymce !== 'undefined') {

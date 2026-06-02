@@ -150,6 +150,19 @@ if (isLoggedIn() && hasRole('viewer') && $current_user_id > 0) {
     $already_completed = (bool)$cStmt->fetchColumn();
 }
 
+// check if this viewer already favorited the tutorial
+$already_favorited = false;
+if ($is_logged_in && $current_user_id > 0) {
+    $fStmt = $conn->prepare(
+        "SELECT 1 FROM dbProj_user_activity
+         WHERE user_id = :uid AND tutorial_id = :tid AND activity_type = 'favorite' LIMIT 1"
+    );
+    $fStmt->bindParam(':uid', $current_user_id,         PDO::PARAM_INT);
+    $fStmt->bindParam(':tid', $tutorial['tutorial_id'], PDO::PARAM_INT);
+    $fStmt->execute();
+    $already_favorited = (bool)$fStmt->fetchColumn();
+}
+
 // prep page vars
 $page_title  = $tutorial['title'];
 $avg_rating  = number_format($tutorial['avg_rating'] ?? 0, 1);
@@ -167,6 +180,35 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
     <link rel="stylesheet" href="<?= asset('css/viewer.css') ?>?v=<?= $css_version ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- star widget uses vanilla JS -->
+    <style>
+        /* completion card */
+        .complete-state { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+        .complete-state .ctext strong { font-size:15px; color:var(--c-text); display:block; }
+        .complete-state .ctext p { font-size:13px; color:var(--c-text-3); margin-top:2px; }
+        .complete-state .ctext p a { color:var(--c-primary); font-weight:600; }
+        .complete-state .btn-success { flex-shrink:0; }
+        .complete-state.done { justify-content:flex-start; }
+        .complete-state.done .ctext strong { color:#065f46; }
+        .complete-icon { width:46px; height:46px; border-radius:50%; background:var(--c-success-bg);
+                         color:var(--c-success); display:flex; align-items:center; justify-content:center;
+                         font-size:24px; flex-shrink:0; }
+        /* favorite button heart state in the hero */
+        #favBtn .fa-heart { transition:color .15s; }
+        #favBtn.is-fav .fa-heart { color:#ff8fa3; }
+
+        /* hero header: title left, actions top-right */
+        .tview-hero-top { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-bottom:24px; }
+        .tview-hero-head { flex:1; min-width:0; }
+        .tview-hero-head h1 { margin-bottom:12px; }
+        .tview-hero-head .tview-subtitle { margin-bottom:0; }
+        .tview-actions { display:flex; gap:10px; flex-shrink:0; margin:0; }
+        .tview-hero .tview-meta { margin-bottom:0; }
+        @media (max-width: 768px) {
+            .tview-hero-top { flex-direction:column; gap:18px; }
+            .tview-actions { width:100%; }
+            .tview-actions .btn-outline-white { flex:1; justify-content:center; }
+        }
+    </style>
 </head>
 <body>
     <?php if ($is_logged_in): ?>
@@ -207,6 +249,8 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
 
         <!-- tutorial hero -->
         <div class="tview-hero">
+            <div class="tview-hero-top">
+            <div class="tview-hero-head">
             <div class="tview-breadcrumb">
                 <a href="<?= $is_logged_in ? SITE_URL . '/viewer/dashboard.php' : SITE_URL . '/public/search.php' ?>">Home</a>
                 <i class="fas fa-chevron-right"></i>
@@ -217,6 +261,23 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
 
             <h1><?= e($tutorial['title']) ?></h1>
             <p class="tview-subtitle"><?= e($tutorial['short_description']) ?></p>
+            </div><!-- /tview-hero-head -->
+
+            <div class="tview-actions">
+                <?php if ($is_logged_in): ?>
+                <button class="btn btn-outline-white <?= $already_favorited ? 'is-fav' : '' ?>"
+                        id="favBtn"
+                        data-tutorial="<?= (int)$tutorial['tutorial_id'] ?>"
+                        onclick="toggleFavorite(this)">
+                    <i class="<?= $already_favorited ? 'fas' : 'far' ?> fa-heart"></i>
+                    <span id="favText"><?= $already_favorited ? 'Favorited' : 'Add to Favorites' ?></span>
+                </button>
+                <?php endif; ?>
+                <button class="btn btn-outline-white" onclick="shareTutorial()">
+                    <i class="fas fa-share-alt"></i> Share
+                </button>
+            </div>
+            </div><!-- /tview-hero-top -->
 
             <!-- meta row -->
             <div class="tview-meta">
@@ -257,12 +318,6 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
                         <strong><?= ucfirst($tutorial['difficulty']) ?></strong>
                     </div>
                 </div>
-            </div>
-
-            <div class="tview-actions">
-                <button class="btn btn-outline-white" onclick="shareTutorial()">
-                    <i class="fas fa-share-alt"></i> Share
-                </button>
             </div>
         </div>
 
@@ -317,14 +372,25 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
                 </div>
 
                 <?php if (isLoggedIn() && hasRole('viewer')): ?>
-                <div class="mark-complete-section" style="margin-top: 20px; display:flex; align-items:center; gap:12px;">
-                    <button id="markCompleteBtn" class="btn btn-success"
-                        data-tutorial="<?= (int)($tutorial['tutorial_id'] ?? 0) ?>">
-                        <i class="fas fa-check-circle"></i> Mark as Complete
-                    </button>
-                    <span id="completeMsg" style="<?= $already_completed ? '' : 'display:none;' ?> color:#10b981; font-weight:600;">
-                        <i class="fas fa-check"></i> Saved to My Learning
-                    </span>
+                <div class="tview-card">
+                    <div class="complete-state <?= $already_completed ? 'done' : '' ?>" id="completeState">
+                        <?php if ($already_completed): ?>
+                            <div class="complete-icon"><i class="fas fa-check-circle"></i></div>
+                            <div class="ctext">
+                                <strong>You've completed this tutorial</strong>
+                                <p>Nice work &mdash; it's saved in <a href="<?= SITE_URL ?>/viewer/my-learning.php">My Learning</a>.</p>
+                            </div>
+                        <?php else: ?>
+                            <div class="ctext">
+                                <strong>Finished this tutorial?</strong>
+                                <p>Mark it complete to track your progress in My Learning.</p>
+                            </div>
+                            <button id="markCompleteBtn" class="btn btn-success"
+                                    data-tutorial="<?= (int)($tutorial['tutorial_id'] ?? 0) ?>">
+                                <i class="fas fa-check-circle"></i> Mark as Complete
+                            </button>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <?php endif; ?>
 
@@ -567,21 +633,59 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
     </script>
 <script src="<?= asset('js/viewer.js') ?>"></script>
     <script>
-        // ajax mark complete
+        var CSRF = <?= json_encode($_SESSION['csrf_token'] ?? '') ?>;
+
+        // ajax mark complete then swap the card to its completed state
         document.getElementById('markCompleteBtn')?.addEventListener('click', function() {
-            var tutId = this.dataset.tutorial;
+            var btn = this;
+            btn.disabled = true;
             fetch('<?= SITE_URL ?>/api/mark-complete.php', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json', 'X-CSRF-Token': <?= json_encode($_SESSION['csrf_token'] ?? '') ?>},
-                body: JSON.stringify({tutorial_id: tutId})
-            }).then(r => r.json()).then(data => {
+                headers: {'Content-Type': 'application/json', 'X-CSRF-Token': CSRF},
+                body: JSON.stringify({tutorial_id: btn.dataset.tutorial})
+            }).then(r => r.json()).then(function(data) {
                 if (data.success) {
-                    document.getElementById('completeMsg').style.display = 'inline';
-                    this.disabled = true;
-                    this.innerHTML = '<i class="fas fa-check-circle"></i> Completed';
+                    var state = document.getElementById('completeState');
+                    state.classList.add('done');
+                    state.innerHTML =
+                        '<div class="complete-icon"><i class="fas fa-check-circle"></i></div>' +
+                        '<div class="ctext"><strong>You\'ve completed this tutorial</strong>' +
+                        '<p>Nice work &mdash; it\'s saved in <a href="<?= SITE_URL ?>/viewer/my-learning.php">My Learning</a>.</p></div>';
+                } else {
+                    btn.disabled = false;
+                    alert(data.message || 'Could not mark complete. Please try again.');
                 }
-            });
+            }).catch(function() { btn.disabled = false; alert('Network error. Please try again.'); });
         });
+
+        // ajax toggle favorite from inside the tutorial
+        function toggleFavorite(btn) {
+            btn.disabled = true;
+            fetch('<?= SITE_URL ?>/api/toggle-favorite.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({tutorial_id: btn.dataset.tutorial, csrf_token: CSRF})
+            }).then(r => r.json()).then(function(data) {
+                if (data.success) {
+                    var icon = btn.querySelector('.fa-heart');
+                    var text = document.getElementById('favText');
+                    if (data.favorited) {
+                        btn.classList.add('is-fav');
+                        if (icon) { icon.classList.remove('far'); icon.classList.add('fas'); }
+                        if (text) text.textContent = 'Favorited';
+                    } else {
+                        btn.classList.remove('is-fav');
+                        if (icon) { icon.classList.remove('fas'); icon.classList.add('far'); }
+                        if (text) text.textContent = 'Add to Favorites';
+                    }
+                } else if (data.redirect) {
+                    window.location.href = data.redirect;
+                } else {
+                    alert(data.message || 'Could not update favorite.');
+                }
+                btn.disabled = false;
+            }).catch(function() { btn.disabled = false; alert('Network error. Please try again.'); });
+        }
     </script>
 </body>
 </html>

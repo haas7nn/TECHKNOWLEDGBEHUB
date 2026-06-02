@@ -234,7 +234,7 @@ class User {
 
     // list users with optional search role and status filters
     public function getAllUsers($search = '', $role = '', $status = '') {
-        $query = "SELECT user_id, full_name, email, role, status, created_at, last_login
+        $query = "SELECT user_id, full_name, email, role, status, created_at, last_login, preferences
                   FROM " . $this->table . "
                   WHERE 1=1";
 
@@ -474,6 +474,36 @@ class User {
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(':user_id', $user_id, PDO::PARAM_INT);
 
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+
+    // load saved preferences json as an array
+    public function getPreferences($user_id) {
+        try {
+            $stmt = $this->conn->prepare("SELECT preferences FROM " . $this->table . " WHERE user_id = :id");
+            $stmt->bindParam(':id', $user_id, PDO::PARAM_INT);
+            $stmt->execute();
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row && !empty($row['preferences'])) {
+                $decoded = json_decode($row['preferences'], true);
+                return is_array($decoded) ? $decoded : [];
+            }
+            return [];
+        } catch (PDOException $e) {
+            return [];
+        }
+    }
+
+    // save a preferences array as json
+    public function savePreferences($user_id, $prefs) {
+        try {
+            $json = json_encode($prefs);
+            $stmt = $this->conn->prepare("UPDATE " . $this->table . " SET preferences = :p WHERE user_id = :id");
+            $stmt->bindParam(':p',  $json,    PDO::PARAM_STR);
+            $stmt->bindParam(':id', $user_id, PDO::PARAM_INT);
             return $stmt->execute();
         } catch (PDOException $e) {
             return false;

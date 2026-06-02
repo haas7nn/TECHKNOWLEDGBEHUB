@@ -31,7 +31,11 @@ if ($instructor_id) {
         $stmt = $conn->prepare("CALL GetInstructorReport(:instructor_id)");
         $stmt->bindParam(':instructor_id', $instructor_id, PDO::PARAM_INT);
         $stmt->execute();
+        // procedure returns two result sets: 1) summary  2) per-tutorial list
+        $summary = $stmt->fetch();
+        $stmt->nextRowset();
         $report = $stmt->fetchAll();
+        $stmt->closeCursor();
     } catch (PDOException $e) {
         // fallback if stored procedure unavailable
         $stmt = $conn->prepare(
@@ -56,7 +60,7 @@ if ($instructor_id) {
 
 // summary stats from report data
 $total_views   = array_sum(array_column($report, 'view_count'));
-$avg_rating_all = count($report) ? array_sum(array_column($report, 'avg_rating')) / count($report) : 0;
+$avg_rating_all = count($report) ? array_sum(array_map(function($r){ return $r['average_rating'] ?? $r['avg_rating'] ?? 0; }, $report)) / count($report) : 0;
 // count published only
 $published_count = count(array_filter($report, fn($r) => ($r['status'] ?? '') === 'published'));
 ?>
@@ -152,7 +156,7 @@ $published_count = count(array_filter($report, fn($r) => ($r['status'] ?? '') ==
                 <td><?= number_format($t['view_count']) ?></td>
                 <td>
                     <i class="fas fa-star" style="color:#ffc107;"></i>
-                    <?= number_format($t['avg_rating'], 1) ?>
+                    <?= number_format($t['average_rating'] ?? $t['avg_rating'] ?? 0, 1) ?>
                     <small style="color:#a0aec0;">(<?= $t['rating_count'] ?>)</small>
                 </td>
                 <td><?= $t['comment_count'] ?></td>

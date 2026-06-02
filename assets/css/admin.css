@@ -15,7 +15,7 @@ a { text-decoration: none; color: inherit; }
 
 /* admin layout */
 .admin-wrap { display: flex; min-height: 100vh; padding-top: 64px; }
-.admin-main { flex: 1; padding: 30px; margin-left: 250px; min-width: 0; }
+.admin-main { flex: 1; padding: 30px; margin-left: 260px; min-width: 0; }
 
 /* admin topbar */
 .admin-topbar {
@@ -36,7 +36,7 @@ a { text-decoration: none; color: inherit; }
 /* admin sidebar */
 .admin-sidebar {
     position: fixed; left: 0; top: 64px;
-    width: 250px; height: calc(100vh - 64px);
+    width: 260px; height: calc(100vh - 64px);
     background: #1a202c; padding: 20px 12px;
     overflow-y: auto; display: flex; flex-direction: column; gap: 4px;
 }

@@ -18,7 +18,7 @@
 
     /* Layout dimensions */
     --nav-h:     64px;
-    --sidebar-w: 240px;
+    --sidebar-w: 260px;
 
     /* Brand palette */
     --c-primary:    #667eea;
@@ -1189,6 +1189,13 @@ h6 { font-size: 13px; font-weight: 600; line-height: 1.5; }
     .admin-topbar { padding: 0 16px; }
 
     .navbar-brand span { display: none; }  /* icon only on mobile */
+
+    /* the hamburger + slide-in sidebar replace the inline nav on mobile,
+       so hide the redundant top-bar links (keep brand, hamburger, user menu) */
+    .navbar-center { display: none; }
+    .navbar-search { display: none; }
+    .navbar-menu > a.nav-link { display: none; }                    /* viewer: Browse / My Learning / Favorites */
+    .navbar-menu > .nav-dropdown:not(:last-child) { display: none; } /* hide Categories, keep the user menu */
 }
 
 @media (max-width: 480px) {

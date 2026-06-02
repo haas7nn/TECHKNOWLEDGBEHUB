@@ -39,10 +39,29 @@ if ($tutorial['instructor_id'] != $current_user_id && !isAdmin()) {
     redirect('creator/my-tutorials.php');
 }
 
-// attempt archive delete
-if ($tutorialObj->delete($tutorial_id)) {
-    setFlashMessage('Tutorial archived and removed from public view.', 'success');
+// which action archive restore or permanent delete
+$action = $_POST['action'] ?? 'archive';
+
+if ($action === 'permanent') {
+    // hard delete removes the tutorial and all its tags media ratings comments
+    if ($tutorialObj->permanentDelete($tutorial_id)) {
+        setFlashMessage('Tutorial permanently deleted.', 'success');
+    } else {
+        setFlashMessage('Failed to delete tutorial.', 'error');
+    }
+} elseif ($action === 'restore') {
+    // bring an archived tutorial back as a draft
+    if ($tutorialObj->restore($tutorial_id)) {
+        setFlashMessage('Tutorial restored as a draft.', 'success');
+    } else {
+        setFlashMessage('Failed to restore tutorial.', 'error');
+    }
 } else {
-    setFlashMessage('Failed to archive tutorial.', 'error');
+    // default soft delete hides it from public view
+    if ($tutorialObj->delete($tutorial_id)) {
+        setFlashMessage('Tutorial archived and removed from public view.', 'success');
+    } else {
+        setFlashMessage('Failed to archive tutorial.', 'error');
+    }
 }
 redirect('creator/my-tutorials.php');

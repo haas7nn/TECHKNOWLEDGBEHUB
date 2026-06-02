@@ -3,6 +3,7 @@
 
 require_once '../includes/auth-check.php';
 require_once '../classes/Tutorial.php';
+require_once '../classes/User.php';
 
 $page_title = 'My Tutorials';
 
@@ -28,6 +29,17 @@ usort($my_tutorials, function($a, $b) use ($sort) {
             return strtotime($b['created_at']) - strtotime($a['created_at']);
     }
 });
+
+// page size from saved preferences
+$prefs    = (new User())->getPreferences($current_user_id);
+$pp       = (int)($prefs['tutorials_per_page'] ?? 10);
+$per_page = in_array($pp, [5, 10, 20, 50], true) ? $pp : 10;
+
+// paginate the sorted list
+$total_count = count($my_tutorials);
+$total_pages = max(1, (int)ceil($total_count / $per_page));
+$page        = min($total_pages, max(1, (int)($_GET['page'] ?? 1)));
+$my_tutorials = array_slice($my_tutorials, ($page - 1) * $per_page, $per_page);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -50,7 +62,7 @@ usort($my_tutorials, function($a, $b) use ($sort) {
             <div class="dashboard-header">
                 <div>
                     <h1><i class="fas fa-book"></i> My Tutorials</h1>
-                    <p>Manage all your tutorials in one place (<?= count($my_tutorials) ?> total)</p>
+                    <p>Manage all your tutorials in one place (<?= $total_count ?> total)</p>
                 </div>
                 <a href="create-tutorial.php" class="btn btn-primary">
                     <i class="fas fa-plus"></i>
@@ -149,15 +161,42 @@ usort($my_tutorials, function($a, $b) use ($sort) {
                                         <a href="<?= SITE_URL ?>/viewer/tutorial-view.php?slug=<?= urlencode($tut['slug']) ?>" class="btn btn-icon" title="View" target="_blank">
                                             <i class="fas fa-external-link-alt"></i>
                                         </a>
-                                        <button class="btn btn-icon btn-danger" title="Delete" onclick="deleteTutorial(<?= (int)$tut['tutorial_id'] ?>, <?= htmlspecialchars(json_encode($tut['title']), ENT_QUOTES, 'UTF-8') ?>)">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
+                                        <?php if ($tut['status'] === 'archived'): ?>
+                                            <button class="btn btn-icon" title="Restore as draft" onclick="tutorialAction(<?= (int)$tut['tutorial_id'] ?>, <?= htmlspecialchars(json_encode($tut['title']), ENT_QUOTES, 'UTF-8') ?>, 'restore')">
+                                                <i class="fas fa-undo"></i>
+                                            </button>
+                                            <button class="btn btn-icon" style="color:var(--c-danger);" title="Delete permanently" onclick="tutorialAction(<?= (int)$tut['tutorial_id'] ?>, <?= htmlspecialchars(json_encode($tut['title']), ENT_QUOTES, 'UTF-8') ?>, 'permanent')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        <?php else: ?>
+                                            <button class="btn btn-icon" title="Archive (hide from public)" onclick="tutorialAction(<?= (int)$tut['tutorial_id'] ?>, <?= htmlspecialchars(json_encode($tut['title']), ENT_QUOTES, 'UTF-8') ?>, 'archive')">
+                                                <i class="fas fa-archive"></i>
+                                            </button>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
+
+                <!-- pagination uses the saved per-page setting -->
+                <?php if ($total_pages > 1):
+                    $pg_base = '?' . http_build_query(array_filter(['status' => $status_filter, 'sort' => $sort]));
+                    $pg_sep  = '&';
+                ?>
+                <nav class="pagination" aria-label="Tutorial pages">
+                    <?php if ($page > 1): ?>
+                        <a href="<?= $pg_base . $pg_sep ?>page=<?= $page - 1 ?>" aria-label="Previous"><i class="fas fa-chevron-left"></i></a>
+                    <?php endif; ?>
+                    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                        <a href="<?= $pg_base . $pg_sep ?>page=<?= $i ?>" class="<?= $i === $page ? 'active' : '' ?>"><?= $i ?></a>
+                    <?php endfor; ?>
+                    <?php if ($page < $total_pages): ?>
+                        <a href="<?= $pg_base . $pg_sep ?>page=<?= $page + 1 ?>" aria-label="Next"><i class="fas fa-chevron-right"></i></a>
+                    <?php endif; ?>
+                </nav>
+                <?php endif; ?>
             <?php endif; ?>
         </main>
     </div>
@@ -171,6 +210,7 @@ usort($my_tutorials, function($a, $b) use ($sort) {
             } else {
                 currentUrl.searchParams.delete('status');
             }
+            currentUrl.searchParams.delete('page');
             window.location.href = currentUrl.toString();
         }
 
@@ -178,18 +218,28 @@ usort($my_tutorials, function($a, $b) use ($sort) {
         function sortTutorials(sort) {
             const currentUrl = new URL(window.location.href);
             currentUrl.searchParams.set('sort', sort);
+            currentUrl.searchParams.delete('page');
             window.location.href = currentUrl.toString();
         }
 
-        // confirm then post delete
-        function deleteTutorial(id, title) {
-            if (!confirm('Archive "' + title + '"?\nIt will be removed from public view.')) return;
-            // post with csrf token
+        // confirm then post archive restore or permanent delete
+        function tutorialAction(id, title, action) {
+            var msg;
+            if (action === 'permanent') {
+                msg = 'Permanently delete "' + title + '"?\nThis removes it for good and cannot be undone.';
+            } else if (action === 'restore') {
+                msg = 'Restore "' + title + '" as a draft?';
+            } else {
+                msg = 'Archive "' + title + '"?\nIt will be hidden from public view but you can restore it later.';
+            }
+            if (!confirm(msg)) return;
+            // post with action and csrf token
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '<?= SITE_URL ?>/creator/delete-tutorial.php';
             form.innerHTML =
                 '<input type="hidden" name="tutorial_id" value="' + id + '">' +
+                '<input type="hidden" name="action" value="' + action + '">' +
                 '<input type="hidden" name="csrf_token" value="' + <?= json_encode(generateCSRFToken()) ?> + '">';
             document.body.appendChild(form);
             form.submit();

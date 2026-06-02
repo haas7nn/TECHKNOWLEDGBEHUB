@@ -276,7 +276,7 @@ $draft_count     = count(array_filter($my_tutorials, fn($t) => $t['status'] === 
                                 <a href="edit-tutorial.php?id=<?= $t['tutorial_id'] ?>" title="Edit" style="color:#667eea; margin:0 6px;"><i class="fas fa-edit"></i></a>
                                 <?php if ($t['status']==='published'): ?>
                                 <!-- view link published only -->
-                                <a href="<?= SITE_URL ?>/viewer/tutorial-view.php?slug=<?= urlencode($t['slug']) ?>"
+                                <a href="<?= SITE_URL ?>/viewer/tutorial-view.php?slug=<?= urlencode($t['slug'] ?? '') ?>"
                                    title="View" style="color:#27ae60; margin:0 6px;" target="_blank">
                                     <i class="fas fa-external-link-alt"></i>
                                 </a>

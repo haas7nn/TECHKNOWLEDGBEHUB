@@ -29,7 +29,7 @@ img { display: block; max-width: 100%; }
 .viewer-container {
     display: flex;
     min-height: 100vh;
-    padding-top: 70px;
+    padding-top: 64px;
 }
 
 .viewer-main {
@@ -43,7 +43,7 @@ img { display: block; max-width: 100%; }
 .viewer-navbar {
     position: fixed;
     top: 0; left: 0; right: 0;
-    height: 70px;
+    height: 64px;
     background: #fff;
     box-shadow: 0 2px 12px rgba(0,0,0,0.08);
     display: flex;
@@ -161,9 +161,9 @@ img { display: block; max-width: 100%; }
 .viewer-sidebar {
     position: fixed;
     left: 0;
-    top: 70px;
+    top: 64px;
     width: 260px;
-    height: calc(100vh - 70px);
+    height: calc(100vh - 64px);
     background: #fff;
     border-right: 1px solid #e8ecf1;
     overflow-y: auto;

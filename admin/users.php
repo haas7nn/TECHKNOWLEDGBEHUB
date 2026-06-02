@@ -110,6 +110,14 @@ $users = $stmt->fetchAll();
                 <td>
                     <strong><?= e($u['full_name']) ?></strong><br>
                     <small style="color:#718096;"><?= e($u['email']) ?></small>
+                    <?php
+                        $uprefs = !empty($u['preferences']) ? json_decode($u['preferences'], true) : [];
+                        if (is_array($uprefs) && !empty($uprefs['deletion_requested'])):
+                    ?>
+                        <br><span class="badge badge-danger" title="Requested <?= e($uprefs['deletion_requested']) ?>">
+                            <i class="fas fa-user-slash"></i> Deletion requested
+                        </span>
+                    <?php endif; ?>
                 </td>
                 <!-- badge colour by role -->
                 <td><span class="badge badge-<?= $u['role']==='admin'?'danger':($u['role']==='creator'?'purple':'info') ?>"><?= ucfirst($u['role']) ?></span></td>

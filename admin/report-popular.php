@@ -11,9 +11,17 @@ if (!$conn) { setFlashMessage("Database error. Please try again.", "error"); red
 $date_from = $_GET['date_from'] ?? $_POST['date_from'] ?? '';
 $date_to   = $_GET['date_to']   ?? $_POST['date_to']   ?? '';
 
-// default to current month
-if ($date_from === '') { $date_from = date('Y-m-01'); }
-if ($date_to   === '') { $date_to   = date('Y-m-d');  }
+// default range: from the earliest published tutorial up to today,
+// so the report shows data on first load instead of an empty current month
+if ($date_from === '') {
+    try {
+        $minDate = $conn->query("SELECT DATE(MIN(published_at)) FROM dbProj_tutorials WHERE status='published' AND published_at IS NOT NULL")->fetchColumn();
+        $date_from = $minDate ?: date('Y-m-01');
+    } catch (PDOException $e) {
+        $date_from = date('Y-m-01');
+    }
+}
+if ($date_to === '') { $date_to = date('Y-m-d'); }
 
 // clamp limit to 1-50
 $limit = max(1, min(50, (int)($_GET['limit'] ?? $_POST['limit'] ?? 10)));
@@ -164,7 +172,7 @@ if (!$error) {
                 </td>
                 <td>
                     <i class="fas fa-star" style="color:#ffc107;"></i>
-                    <?= number_format($t['avg_rating'], 1) ?>
+                    <?= number_format($t['average_rating'] ?? $t['avg_rating'] ?? 0, 1) ?>
                     <small style="color:#a0aec0;">(<?= $t['rating_count'] ?>)</small>
                 </td>
                 <td><?= $t['comment_count'] ?></td>
