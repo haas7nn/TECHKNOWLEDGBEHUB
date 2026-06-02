@@ -1,5 +1,5 @@
 <?php
-// edit tutorial page where instructors can update an existing tutorial
+// edit tutorial page for instructors
 
 require_once '../includes/auth-check.php';
 require_once '../classes/Tutorial.php';
@@ -7,10 +7,10 @@ require_once '../classes/FileUpload.php';
 
 $page_title = 'Edit Tutorial';
 
-// read the tutorial id from the url
+// get tutorial id from url
 $tutorial_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
-// if no valid id was given send the user back to their tutorial list
+// redirect if id missing
 if (!$tutorial_id) {
     setFlashMessage('Invalid tutorial ID', 'error');
     redirect('creator/my-tutorials.php');
@@ -20,13 +20,13 @@ if (!$tutorial_id) {
 $tutorialObj = new Tutorial();
 $tutorial = $tutorialObj->getById($tutorial_id);
 
-// if the tutorial does not exist send the user back
+// 404 if tutorial missing
 if (!$tutorial) {
     setFlashMessage('Tutorial not found', 'error');
     redirect('creator/my-tutorials.php');
 }
 
-// ownership check
+// block non-owners to prevent IDOR
 if ($tutorial['instructor_id'] != $current_user_id && !isAdmin()) {
     setFlashMessage('You do not have permission to edit this tutorial', 'error');
     redirect('creator/my-tutorials.php');
@@ -36,62 +36,62 @@ if ($tutorial['instructor_id'] != $current_user_id && !isAdmin()) {
 $database = new Database();
 $conn = $database->connect();
 
-// fetch all categories for the category dropdown
+// load categories for dropdown
 $categoriesQuery = "SELECT category_id, category_name FROM dbProj_categories ORDER BY category_name";
 $categoriesStmt = $conn->query($categoriesQuery);
 $categories = $categoriesStmt->fetchAll();
 
-// fetch all tags for the tag checkboxes
+// load tags for checkboxes
 $tagsQuery = "SELECT tag_id, tag_name FROM dbProj_tags ORDER BY tag_name";
 $tagsStmt = $conn->query($tagsQuery);
 $all_tags = $tagsStmt->fetchAll();
 
-// get the ids of the tags this tutorial already has so we can pretick those checkboxes
+// current tag ids for pre-ticking checkboxes
 $current_tag_ids = array_column($tutorial['tags'] ?? [], 'tag_id');
 
 $error = '';
 $success = '';
 
-// handle save
+// handle form save
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // csrf check
     if (!verifyCsrfFromPost()) {
         $error = 'Invalid security token. Please refresh the page and try again.';
     } else {
-    // check ownership again on post
+    // re-check ownership on POST too
     if ($tutorial['instructor_id'] != $current_user_id && !isAdmin()) {
         setFlashMessage('Permission denied.', 'error');
         redirect('creator/my-tutorials.php');
     }
-    // collect the updated field values from the post data
+    // collect updated fields from POST
     $update_data = [
         'title' => clean($_POST['title']),
         'short_description' => clean($_POST['short_description']),
-        'content' => $_POST['content'], // do not sanitize HTML content as it is handled by the editor
+        'content' => $_POST['content'], // editor handles sanitization
         'category_id' => (int)$_POST['category_id'],
         'difficulty' => clean($_POST['difficulty']),
         'duration_minutes' => !empty($_POST['duration_minutes']) ? (int)$_POST['duration_minutes'] : null,
         'video_url' => clean($_POST['video_url'] ?? ''),
         'status' => clean($_POST['status']),
-        'thumbnail' => $tutorial['thumbnail'] // keep the existing thumbnail unless a new one is uploaded
+        'thumbnail' => $tutorial['thumbnail'] // keep existing unless replaced
     ];
 
-    // get selected tags
+    // get selected tag ids
     $selected_tags = isset($_POST['tags']) ? $_POST['tags'] : [];
 
-    // basic required field check before attempting any database updates
+    // validate required fields
     if (empty($update_data['title']) || empty($update_data['content']) || empty($update_data['category_id'])) {
         $error = 'Please fill in all required fields';
     } else {
 
-        // handle a new thumbnail upload if one was selected
+        // upload new thumbnail if provided
         if (isset($_FILES['thumbnail']) && $_FILES['thumbnail']['error'] === UPLOAD_ERR_OK) {
             $fileUpload = new FileUpload();
             $upload_result = $fileUpload->uploadThumbnail($_FILES['thumbnail'], 'tutorial');
 
             if ($upload_result['success']) {
-                // delete the old thumbnail file before saving the new path
+                // delete old thumbnail before saving new one
                 if (!empty($tutorial['thumbnail'])) {
                     $fileUpload->deleteFile($tutorial['thumbnail']);
                 }
@@ -101,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // save the updated tutorial data if there were no errors
+        // save if no errors
         if (empty($error)) {
             $update_result = $tutorialObj->update($tutorial_id, $update_data, $selected_tags);
 

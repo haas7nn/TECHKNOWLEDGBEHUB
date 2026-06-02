@@ -1,5 +1,5 @@
 <?php
-// student dashboard page that shows real learning stats and recommended tutorials
+// student dashboard with stats and recommendations
 
 require_once '../includes/viewer-auth-check.php';
 require_once '../classes/User.php';
@@ -7,21 +7,21 @@ require_once '../classes/Tutorial.php';
 
 $page_title = 'My Learning Dashboard';
 
-// load the user object and fetch their overall stats
+// load user and stats
 $user = new User();
 $user_stats = $user->getUserStats($current_user_id);
 
-// db connect
+// open db connection
 $database = new Database();
 $conn = $database->connect();
 
-// make sure the database actually connected before we try to use it
+// bail early if db is down
 if (!$conn) {
     setFlashMessage('Could not connect to the database. Please try again later.', 'error');
-    // show a blank dashboard with the error flash above
+    // show empty dashboard with flash error
 }
 
-// set default values for everything in case the database is down
+// safe defaults if db is unavailable
 $enrolled_count      = 0;
 $completed_count     = 0;
 $in_progress_count   = 0;
@@ -30,8 +30,7 @@ $continue_learning   = [];
 $recommended_tutorials = [];
 
 if ($conn) {
-    // count how many unique tutorials this student has interacted with
-    // only count actual views and completions not favourites (f28)
+    // count views and completions only not favorites
     $enrolledStmt = $conn->prepare(
         "SELECT COUNT(DISTINCT tutorial_id) as count
          FROM dbProj_user_activity
@@ -43,12 +42,11 @@ if ($conn) {
     $row = $enrolledStmt->fetch();
     $enrolled_count = (int)($row ? ($row['count'] ?? 0) : 0);
 
-    // grab the completed count from user stats and work out how many are still in progress
-    // clamp to 0 to prevent a negative value if completed_count exceeds enrolled_count
+    // clamp in-progress to zero to avoid negatives
     $completed_count   = $user_stats['completed_tutorials'] ?? 0;
     $in_progress_count = max(0, $enrolled_count - $completed_count);
 
-    // add up the total time spent on tutorials the user has completed
+    // sum duration of completed tutorials
     $timeStmt = $conn->prepare(
         "SELECT SUM(t.duration_minutes) as total_time
          FROM dbProj_user_activity ua
@@ -60,8 +58,7 @@ if ($conn) {
     $row = $timeStmt->fetch();
     $total_learning_time = (float)($row ? ($row['total_time'] ?? 0) : 0);
 
-    // get the last 3 tutorials this student touched so they can continue where they left off
-    // progress is 100 if complete 75 if viewed in the last 7 days 50 if last 30 days else 25
+    // last 3 touched tutorials — progress recency bucket 100/75/50/25
     $continueStmt = $conn->prepare(
         "SELECT t.*, c.category_name, u.full_name as instructor_name,
                 ua.activity_type,
@@ -85,7 +82,7 @@ if ($conn) {
     $continueStmt->execute();
     $continue_learning = $continueStmt->fetchAll();
 
-    // fetch a set of published tutorials to show in the recommendations section
+    // grab published tutorials for recommendations section
     $tutorial              = new Tutorial();
     $recommended_result    = $tutorial->getPublished(1, 6);
     $recommended_tutorials = $recommended_result['tutorials'] ?? [];
@@ -108,7 +105,7 @@ if ($conn) {
 
         <main class="viewer-main">
 
-            <!-- welcome heading and browse button -->
+            <!-- welcome header -->
             <div class="dashboard-header">
                 <div>
                     <h1><i class="fas fa-graduation-cap"></i> Welcome back, <?= e($current_user_name) ?>!</h1>
@@ -122,7 +119,7 @@ if ($conn) {
 
             <?php displayFlashMessage(); ?>
 
-            <!-- four stat cards showing enrolled, in progress, completed and total learning time -->
+            <!-- stat cards grid -->
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon si-purple">
@@ -177,7 +174,7 @@ if ($conn) {
                 </div>
             </div>
 
-            <!-- show the last three tutorials the student was working on -->
+            <!-- continue learning section -->
             <?php if (!empty($continue_learning)): ?>
             <section class="continue-section">
                 <h2><i class="fas fa-play-circle"></i> Continue Learning</h2>
@@ -188,7 +185,7 @@ if ($conn) {
                             <?php if (!empty($tut['thumbnail'])): ?>
                                 <img src="<?= SITE_URL ?>/uploads/<?= e($tut['thumbnail']) ?>" alt="<?= e($tut['title']) ?>" onerror="this.onerror=null;this.src='<?= SITE_URL ?>/uploads/placeholder.svg'">
                             <?php else: ?>
-                                <!-- placeholder icon when the tutorial has no thumbnail -->
+                                <!-- no thumbnail fallback -->
                                 <div class="thumb-placeholder"><i class="fas fa-book"></i></div>
                             <?php endif; ?>
                             <div class="play-overlay">
@@ -201,7 +198,7 @@ if ($conn) {
                                 <i class="fas fa-user"></i>
                                 <?= e($tut['instructor_name']) ?>
                             </p>
-                            <!-- progress bar showing how far through the tutorial the student is -->
+                            <!-- progress bar -->
                             <div class="progress-wrapper">
                                 <div class="progress-bar">
                                     <div class="progress-fill" style="width: <?= $tut['progress'] ?>%"></div>
@@ -218,7 +215,7 @@ if ($conn) {
             </section>
             <?php endif; ?>
 
-            <!-- section showing tutorials the platform recommends for this student -->
+            <!-- recommended tutorials -->
             <section class="recommended-section">
                 <div class="section-header">
                     <h2><i class="fas fa-lightbulb"></i> Recommended for You</h2>
@@ -226,7 +223,7 @@ if ($conn) {
                 </div>
 
                 <?php if (empty($recommended_tutorials)): ?>
-                <!-- empty state shown when there are no tutorials to recommend yet -->
+                <!-- empty recommendations state -->
                 <div class="empty-state">
                     <i class="fas fa-graduation-cap"></i>
                     <h3>Start Your Learning Journey!</h3>
@@ -237,7 +234,7 @@ if ($conn) {
                     </a>
                 </div>
                 <?php else: ?>
-                <!-- grid of recommended tutorial cards -->
+                <!-- recommended cards grid -->
                 <div class="tutorials-grid">
                     <?php foreach ($recommended_tutorials as $tut): ?>
                     <div class="tutorial-card">
@@ -259,7 +256,7 @@ if ($conn) {
                             <h3><?= e($tut['title']) ?></h3>
                             <p><?= e(truncate($tut['short_description'], 100)) ?></p>
 
-                            <!-- instructor name and duration -->
+                            <!-- instructor and duration row -->
                             <div class="card-meta">
                                 <span><i class="fas fa-user" aria-hidden="true"></i> <?= e($tut['instructor_name']) ?></span>
                                 <?php if ($tut['duration_minutes']): ?>
@@ -268,7 +265,7 @@ if ($conn) {
                             </div>
                         </div>
 
-                        <!-- card footer with rating and start learning button -->
+                        <!-- card footer -->
                         <div class="card-footer">
                             <div class="rating">
                                 <i class="fas fa-star" aria-hidden="true"></i>

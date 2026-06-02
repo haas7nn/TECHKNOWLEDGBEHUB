@@ -1,26 +1,26 @@
 <?php
 // viewer sidebar
-// get current page
+// track current page for active link
 $current_page = basename($_SERVER['PHP_SELF']);
 ?>
 <aside class="viewer-sidebar">
     <nav class="sidebar-nav">
 
-        <!-- link to the viewer dashboard -->
+        <!-- dashboard link -->
         <a href="<?= SITE_URL ?>/viewer/dashboard.php"
            class="nav-item <?= $current_page === 'dashboard.php' ? 'active' : '' ?>">
             <i class="fas fa-home"></i>
             <span>Dashboard</span>
         </a>
 
-        <!-- link to the browse tutorials page -->
+        <!-- browse tutorials link -->
         <a href="<?= SITE_URL ?>/viewer/browse-tutorials.php"
            class="nav-item <?= $current_page === 'browse-tutorials.php' ? 'active' : '' ?>">
             <i class="fas fa-th-large"></i>
             <span>Browse Tutorials</span>
         </a>
 
-        <!-- link to the learning history page -->
+        <!-- learning history link -->
         <a href="<?= SITE_URL ?>/viewer/my-learning.php"
            class="nav-item <?= $current_page === 'my-learning.php' ? 'active' : '' ?>">
             <i class="fas fa-graduation-cap"></i>
@@ -29,7 +29,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
         <div class="nav-divider"></div>
 
-        <!-- link to the public search page -->
+        <!-- public search link -->
         <a href="<?= SITE_URL ?>/public/search.php"
            class="nav-item <?= $current_page === 'search.php' ? 'active' : '' ?>">
             <i class="fas fa-search"></i>
@@ -38,14 +38,14 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
         <div class="nav-divider"></div>
 
-        <!-- logout link styled in red so it is easy to spot -->
+        <!-- logout link -->
         <a href="<?= SITE_URL ?>/auth/logout.php" class="nav-item" style="color:#e53e3e;">
             <i class="fas fa-sign-out-alt"></i>
             <span>Logout</span>
         </a>
     </nav>
 
-    <!-- footer widget encouraging the user to keep learning -->
+    <!-- sidebar footer widget -->
     <div class="sidebar-footer">
         <div class="progress-widget">
             <h4><i class="fas fa-trophy"></i> Keep Learning!</h4>

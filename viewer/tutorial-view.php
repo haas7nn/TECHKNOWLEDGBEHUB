@@ -1,39 +1,38 @@
 <?php
-// tutorial view page that works for both guests and logged in viewers
-
-// soft auth check guests can still view but creators get sent to their own area
+// tutorial view for guests and logged-in viewers
 require_once '../config/config.php';
 require_once '../classes/Tutorial.php';
 
-// redirect creators away from this page
+// creators use their own area
 if (isLoggedIn() && isCreator()) {
     redirect('creator/dashboard.php');
 }
 
-// check visitor type
+// resolve visitor type and id
 $is_logged_in       = isLoggedIn() && (isViewer() || isAdmin());
 $current_user_id    = $is_logged_in ? getCurrentUserId()    : 0;
 $current_user_name  = $is_logged_in ? getCurrentUserName()  : 'Guest';
 $current_user_role  = $is_logged_in ? getCurrentUserRole()  : 'guest';
 
-// get slug from url
+// slug from url
 $slug = isset($_GET['slug']) ? clean($_GET['slug']) : '';
 
-// if no slug was given redirect to the browse page
+// no slug redirect to browse
 if (empty($slug)) {
     redirect($is_logged_in ? 'viewer/browse-tutorials.php' : 'public/search.php');
 }
 
-// find tutorial by slug
+// fetch tutorial by slug
 $tutorialObj = new Tutorial();
 $tutorial    = $tutorialObj->getBySlug($slug);
 
-// if the tutorial was not found send the user back to browse
+// 404 fallback redirect to browse
 if (!$tutorial) {
     redirect($is_logged_in ? 'viewer/browse-tutorials.php' : 'public/search.php');
 }
 
-// log view
+// logged-in uses logView for activity tracking
+// guest gets direct view_count increment instead
 if ($current_user_id > 0) {
     $tutorialObj->logView($tutorial['tutorial_id'], $current_user_id);
 } else {
@@ -46,16 +45,16 @@ if ($current_user_id > 0) {
     }
 }
 
-// db connect
+// main db connection
 $database = new Database();
 $conn     = $database->connect();
 
-// if no db
+// redirect if db failed
 if (!$conn) {
     redirect($is_logged_in ? 'viewer/browse-tutorials.php' : 'public/search.php');
 }
 
-// handle comment post
+// handle new comment submission
 $comment_error = '';
 if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment'])) {
     if (!verifyCsrfFromPost()) {
@@ -65,7 +64,7 @@ if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comm
         if (empty($comment_text)) {
             $comment_error = 'Comment cannot be empty.';
         } else {
-            // insert comment
+            // insert approved comment
             $stmt = $conn->prepare(
                 "INSERT INTO dbProj_comments (tutorial_id, user_id, comment_text, status, created_at)
                  VALUES (:tid, :uid, :txt, 'approved', NOW())"
@@ -83,18 +82,18 @@ if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comm
     }
 }
 
-// handle rating post
+// handle rating submission
 $rating_error = '';
 if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rating'])) {
     if (!verifyCsrfFromPost()) {
         $rating_error = 'Invalid security token. Please try again.';
     } else {
         $rating_val = (int)$_POST['rating'];
-        // rating must be between 1 and 5
+        // must be 1-5
         if ($rating_val < 1 || $rating_val > 5) {
             $rating_error = 'Please select a rating between 1 and 5.';
         } else {
-            // upsert rating
+            // upsert rating on duplicate key
             $stmt = $conn->prepare(
                 "INSERT INTO dbProj_ratings (tutorial_id, user_id, rating, rated_at)
                  VALUES (:tid, :uid, :r, NOW())
@@ -114,7 +113,7 @@ if ($is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rati
     }
 }
 
-// get approved comments
+// fetch approved comments newest first
 $commentsStmt = $conn->prepare(
     "SELECT c.*, u.full_name AS user_name
      FROM dbProj_comments c
@@ -126,7 +125,7 @@ $commentsStmt->bindParam(':tid', $tutorial['tutorial_id'], PDO::PARAM_INT);
 $commentsStmt->execute();
 $comments = $commentsStmt->fetchAll();
 
-// check existing rating
+// load user's existing rating if any
 $user_rating = 0;
 if ($is_logged_in && $current_user_id > 0) {
     $rStmt = $conn->prepare(
@@ -140,7 +139,7 @@ if ($is_logged_in && $current_user_id > 0) {
     $user_rating = $rRow ? (int)$rRow['rating'] : 0;
 }
 
-// prep variables
+// prep page vars
 $page_title  = $tutorial['title'];
 $avg_rating  = number_format($tutorial['avg_rating'] ?? 0, 1);
 $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
@@ -151,18 +150,18 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= e($tutorial['title']) ?> | <?= SITE_NAME ?></title>
-    <!-- shared design tokens must load first so var(--c-*) resolves in viewer.css and inline styles -->
+    <!-- shared tokens must load before viewer.css -->
     <link rel="stylesheet" href="<?= asset('css/shared.css') ?>">
-    <!-- cache bust the CSS so updated styles always load -->
+    <!-- cache-busted viewer styles -->
     <link rel="stylesheet" href="<?= asset('css/viewer.css') ?>?v=<?= $css_version ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <!-- star widget uses vanilla JS -->
 </head>
 <body>
     <?php if ($is_logged_in): ?>
         <?php include '../includes/viewer-nav.php'; ?>
     <?php else: ?>
-        <!-- minimal public navigation bar shown to guests who are not logged in -->
+        <!-- minimal nav for guests -->
         <nav class="viewer-navbar">
             <div class="navbar-brand">
                 <a href="<?= SITE_URL ?>">
@@ -187,7 +186,7 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
 
     <div class="tview-wrap">
 
-        <!-- back to browse button -->
+        <!-- back link -->
         <div class="tview-back">
             <a href="<?= $is_logged_in ? SITE_URL . '/viewer/browse-tutorials.php' : SITE_URL . '/public/search.php' ?>"
                class="btn btn-outline btn-sm">
@@ -195,7 +194,7 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
             </a>
         </div>
 
-        <!-- hero section with the tutorial title, meta info and share button -->
+        <!-- tutorial hero -->
         <div class="tview-hero">
             <div class="tview-breadcrumb">
                 <a href="<?= $is_logged_in ? SITE_URL . '/viewer/dashboard.php' : SITE_URL . '/public/search.php' ?>">Home</a>
@@ -208,7 +207,7 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
             <h1><?= e($tutorial['title']) ?></h1>
             <p class="tview-subtitle"><?= e($tutorial['short_description']) ?></p>
 
-            <!-- meta row showing instructor, rating, views, duration and difficulty -->
+            <!-- meta row -->
             <div class="tview-meta">
                 <div class="tview-meta-item">
                     <i class="fas fa-user"></i>
@@ -258,14 +257,14 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
 
         <?php displayFlashMessage(); ?>
 
-        <!-- two column layout with main content on the left and sidebar on the right -->
+        <!-- two column layout -->
         <div class="tview-body">
 
-            <!-- left column with video tutorial body rating form and comments -->
+            <!-- main content column -->
             <div class="tview-main">
 
                 <?php if (!empty($tutorial['video_url'])): ?>
-                <!-- embedded video player if a video URL was provided -->
+                <!-- video player -->
                 <div class="tview-card">
                     <h2 class="tview-section-title"><i class="fas fa-play-circle"></i> Video</h2>
                     <div class="tview-video-wrapper">
@@ -277,16 +276,13 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
                 </div>
                 <?php endif; ?>
 
-                <!-- the main tutorial body content with javascript URIs stripped for safety -->
+                <!-- sanitized tutorial body -->
                 <div class="tview-card">
                     <h2 class="tview-section-title"><i class="fas fa-book-open"></i> Tutorial Content</h2>
                     <div class="tview-content-body">
                         <?php
-                        // todo replace with htmlpurifier in production for full xss safety
-                        // the preg_replace approach is fragile and can be bypassed strip_tags
-                        // with a strict allowlist is safer as a minimum measure
+                        // prefer HTMLPurifier when available for full XSS safety
                         if (class_exists('HTMLPurifier')) {
-                            // use htmlpurifier when available — the gold standard for html sanitisation
                             $purifier_config = HTMLPurifier_Config::createDefault();
                             $purifier_config->set('HTML.Allowed',
                                 'p,br,strong,b,em,i,u,s,ul,ol,li,h2,h3,h4,blockquote,code,pre,a[href],img[src|alt|width|height],hr,span,div'
@@ -295,14 +291,13 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
                             $purifier = new HTMLPurifier($purifier_config);
                             echo $purifier->purify($tutorial['content']);
                         } else {
-                            // fallback strip_tags with a strict allowlist then remove any
-                            // remaining inline event handlers and javascript uris via regex
+                            // fallback strip_tags then strip event handlers and js uris
                             $allowed_tags = '<p><br><strong><b><em><i><u><s><ul><ol><li>'
                                           . '<h2><h3><h4><blockquote><code><pre><a><img><hr><span><div>';
                             $safe = strip_tags($tutorial['content'], $allowed_tags);
-                            // remove inline event handlers (onclick= onmouseover= etc)
+                            // strip inline event handlers
                             $safe = preg_replace('/\s*on\w+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]*)/i', '', $safe);
-                            // remove javascript uris from href and src attributes
+                            // strip javascript uris from href and src
                             $safe = preg_replace('/(href|src)\s*=\s*(["\'])\s*javascript:[^"\']*\2/i', '$1=$2#$2', $safe);
                             echo $safe;
                         }
@@ -320,12 +315,12 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
                 </div>
                 <?php endif; ?>
 
-                <!-- star rating section where users can leave or update their rating -->
+                <!-- star rating form -->
                 <div class="tview-card">
                     <h2 class="tview-section-title"><i class="fas fa-star"></i> Rate This Tutorial</h2>
 
                     <?php if ($is_logged_in): ?>
-                        <!-- tell the user whether they have already rated this or not -->
+                        <!-- show existing or prompt to rate -->
                         <p class="tview-hint">
                             <?= $user_rating
                                 ? 'You rated this ' . $user_rating . '/5. Update your rating below.'
@@ -336,7 +331,7 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
                             <div class="alert alert-error"><?= e($rating_error) ?></div>
                         <?php endif; ?>
 
-                        <!-- rating form with five star radio buttons -->
+                        <!-- star radio form -->
                         <form method="POST" action="" class="tview-rating-form">
                             <?php csrfField(); ?>
                             <div class="tview-stars" id="starRating">
@@ -354,7 +349,7 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
                             </button>
                         </form>
                     <?php else: ?>
-                        <!-- prompt guest users to log in before they can rate -->
+                        <!-- guest rate prompt -->
                         <p class="tview-hint">
                             <a href="<?= SITE_URL ?>/auth/login.php" style="color:var(--c-primary);font-weight:600;">
                                 <i class="fas fa-sign-in-alt"></i> Login
@@ -364,7 +359,7 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
                     <?php endif; ?>
                 </div>
 
-                <!-- comments section showing existing comments and a form to add a new one -->
+                <!-- comments section -->
                 <div class="tview-card">
                     <h2 class="tview-section-title">
                         <i class="fas fa-comments"></i> Comments
@@ -376,7 +371,7 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
                             <div class="alert alert-error"><?= e($comment_error) ?></div>
                         <?php endif; ?>
 
-                        <!-- comment submission form for logged in users -->
+                        <!-- comment form -->
                         <form method="POST" action="" class="tview-comment-form">
                             <?php csrfField(); ?>
                             <i class="fas fa-user-circle tview-avatar-icon"></i>
@@ -389,7 +384,7 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
                             </div>
                         </form>
                     <?php else: ?>
-                        <!-- prompt guests to log in or register before they can comment -->
+                        <!-- guest comment prompt -->
                         <p style="margin-bottom:16px;color:var(--c-text-3);">
                             <a href="<?= SITE_URL ?>/auth/login.php" style="color:var(--c-primary);font-weight:600;">
                                 <i class="fas fa-sign-in-alt"></i> Login
@@ -403,13 +398,13 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
                     <?php endif; ?>
 
                     <?php if (empty($comments)): ?>
-                        <!-- empty state when nobody has commented yet -->
+                        <!-- no comments yet -->
                         <div class="tview-empty-comments">
                             <i class="fas fa-comment-slash"></i>
                             <p>No comments yet. Be the first!</p>
                         </div>
                     <?php else: ?>
-                        <!-- list of approved comments newest first -->
+                        <!-- approved comments -->
                         <div class="tview-comments-list">
                             <?php foreach ($comments as $c): ?>
                             <div class="tview-comment">
@@ -429,10 +424,10 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
 
             </div><!-- /tview-main -->
 
-            <!-- right sidebar with about info, tags, downloads and the user's rating -->
+            <!-- sidebar -->
             <aside class="tview-sidebar">
 
-                <!-- about box showing published date, category, level, duration and views -->
+                <!-- about box -->
                 <div class="tview-sidebar-card">
                     <h3><i class="fas fa-info-circle"></i> About</h3>
                     <ul class="tview-info-list">
@@ -457,7 +452,7 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
                 </div>
 
                 <?php if (!empty($tutorial['tags'])): ?>
-                <!-- tag chips for this tutorial -->
+                <!-- tag chips -->
                 <div class="tview-sidebar-card">
                     <h3><i class="fas fa-tags"></i> Tags</h3>
                     <div class="tview-tag-list">
@@ -469,7 +464,7 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
                 <?php endif; ?>
 
                 <?php if (!empty($tutorial['media'])): ?>
-                <!-- downloadable files attached to this tutorial -->
+                <!-- downloadable attachments -->
                 <div class="tview-sidebar-card">
                     <h3><i class="fas fa-download"></i> Downloads</h3>
                     <div class="tview-downloads">
@@ -485,7 +480,7 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
                 </div>
                 <?php endif; ?>
 
-                <!-- show the logged in user's current rating for this tutorial -->
+                <!-- user rating sidebar card -->
                 <div class="tview-sidebar-card">
                     <h3><i class="fas fa-star"></i> Your Rating</h3>
                     <?php if ($user_rating): ?>
@@ -505,17 +500,15 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
     </div><!-- /tview-wrap -->
 
     <script>
-        // share button
+        // share via web share api or clipboard fallback
         function shareTutorial() {
             if (navigator.share) {
-                // json_encode handles all js string escaping safely
                 navigator.share({ title: <?= json_encode($tutorial['title']) ?>, url: window.location.href });
             } else {
                 navigator.clipboard.writeText(window.location.href).then(function() {
-                    // show success message
                     alert('Link copied to clipboard!');
                 }).catch(function() {
-                    // fallback select text from input
+                    // select text fallback
                     const dummy = document.createElement('input');
                     document.body.appendChild(dummy);
                     dummy.value = window.location.href;
@@ -526,38 +519,42 @@ $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
             }
         }
 
-        // jquerydriven star rating — hover previews and clicktolock highlighting
-        $(function() {
-            var $container = $('#starRating');
-            if (!$container.length) return;
+        // hover preview and click-to-lock star widget
+        (function () {
+            var container = document.getElementById('starRating');
+            if (!container) return;
 
-            // paint stars gold up to val grey beyond it
+            var labels = Array.from(container.querySelectorAll('label'));
+            var inputs = Array.from(container.querySelectorAll('input[type="radio"]'));
+
             function highlightUpTo(val) {
-                $container.find('label').each(function() {
-                    $(this).find('i').css('color', parseInt($(this).data('val')) <= val ? '#ffc107' : '#e2e8f0');
+                labels.forEach(function (lbl) {
+                    var star = lbl.querySelector('i');
+                    if (star) star.style.color = parseInt(lbl.dataset.val, 10) <= val ? '#ffc107' : '#e2e8f0';
                 });
             }
 
-            // restore any previously selected rating when the page loads
-            var $checked = $container.find('input:checked');
-            if ($checked.length) highlightUpTo(parseInt($checked.val()));
+            // restore saved rating on load
+            var checked = inputs.find(function (i) { return i.checked; });
+            if (checked) highlightUpTo(parseInt(checked.value, 10));
 
-            $container.find('label')
-                .on('mouseover', function() {
-                    highlightUpTo(parseInt($(this).data('val')));
-                })
-                .on('mouseout', function() {
-                    var $sel = $container.find('input:checked');
-                    highlightUpTo($sel.length ? parseInt($sel.val()) : 0);
-                })
-                .on('click', function() {
-                    highlightUpTo(parseInt($(this).data('val')));
+            labels.forEach(function (lbl) {
+                lbl.addEventListener('mouseover', function () {
+                    highlightUpTo(parseInt(lbl.dataset.val, 10));
                 });
-        });
+                lbl.addEventListener('mouseout', function () {
+                    var sel = inputs.find(function (i) { return i.checked; });
+                    highlightUpTo(sel ? parseInt(sel.value, 10) : 0);
+                });
+                lbl.addEventListener('click', function () {
+                    highlightUpTo(parseInt(lbl.dataset.val, 10));
+                });
+            });
+        }());
     </script>
 <script src="<?= asset('js/viewer.js') ?>"></script>
     <script>
-        // mark complete ajax
+        // ajax mark complete
         document.getElementById('markCompleteBtn')?.addEventListener('click', function() {
             var tutId = this.dataset.tutorial;
             fetch('<?= SITE_URL ?>/api/mark-complete.php', {

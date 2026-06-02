@@ -1,23 +1,23 @@
-/* ===================== ADMIN PANEL CSS ===================== */
-/* Shared design tokens for --c-* variables and flash message styles */
+/* admin panel */
+/* shared design tokens */
 @import url('./shared.css');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    background: #f0f2f8;
-    color: #2d3748;
+    font-family: var(--font);
+    background: var(--c-page);
+    color: var(--c-text);
     font-size: 15px;
 }
 
 a { text-decoration: none; color: inherit; }
 
-/* layout */
+/* admin layout */
 .admin-wrap { display: flex; min-height: 100vh; padding-top: 64px; }
 .admin-main { flex: 1; padding: 30px; margin-left: 250px; min-width: 0; }
 
-/* topbar */
+/* admin topbar */
 .admin-topbar {
     position: fixed; top: 0; left: 0; right: 0; height: 64px;
     background: #1a202c; color: #fff;
@@ -33,7 +33,7 @@ a { text-decoration: none; color: inherit; }
 .topbar-link.danger { background: rgba(229,62,62,.2); color: #fc8181; }
 .topbar-link.danger:hover { background: rgba(229,62,62,.35); }
 
-/* sidebar */
+/* admin sidebar */
 .admin-sidebar {
     position: fixed; left: 0; top: 64px;
     width: 250px; height: calc(100vh - 64px);
@@ -63,21 +63,21 @@ a { text-decoration: none; color: inherit; }
 .stat-details h3 { font-size: 28px; font-weight: 700; line-height: 1; }
 .stat-details p { font-size: 13px; color: #718096; margin-top: 4px; }
 
-/* cards / panels */
+/* admin cards */
 .admin-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.06); margin-bottom: 24px; overflow: hidden; }
 .admin-card-header { padding: 18px 24px; border-bottom: 1px solid #f0f2f8; display: flex; align-items: center; justify-content: space-between; }
 .admin-card-header h2 { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
 .admin-card-header h2 i { color: #667eea; }
 .admin-card-body { padding: 24px; }
 
-/* tables */
+/* admin tables */
 .admin-table { width: 100%; border-collapse: collapse; }
 .admin-table th { background: #f8f9fc; padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #718096; border-bottom: 1px solid #e8ecf1; }
 .admin-table td { padding: 14px 16px; border-bottom: 1px solid #f0f2f8; font-size: 14px; vertical-align: middle; }
 .admin-table tr:last-child td { border-bottom: none; }
 .admin-table tr:hover td { background: #fafbff; }
 
-/* badges */
+/* status badges */
 .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
 .badge-success  { background: #d4edda; color: #155724; }
 .badge-warning  { background: #fff3cd; color: #856404; }
@@ -86,7 +86,7 @@ a { text-decoration: none; color: inherit; }
 .badge-purple   { background: #e9d8fd; color: #553c9a; }
 .badge-gray     { background: #e2e8f0; color: #4a5568; }
 
-/* buttons */
+/* admin buttons */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 9px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all .2s; white-space: nowrap; }
 .btn-primary { background: linear-gradient(135deg,#667eea,#764ba2); color: #fff; box-shadow: 0 3px 10px rgba(102,126,234,.3); }
 .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(102,126,234,.4); color: #fff; }
@@ -102,7 +102,7 @@ a { text-decoration: none; color: inherit; }
 .btn-icon.danger { color: #e53e3e; }
 .btn-icon.success { color: #38a169; }
 
-/* alerts */
+/* flash alerts */
 .alert { padding: 14px 18px; border-radius: 10px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; }
 .alert-success { background: #d4edda; color: #155724; border-left: 4px solid #28a745; }
 .alert-error   { background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545; }
@@ -110,34 +110,34 @@ a { text-decoration: none; color: inherit; }
 .alert-dismissible { position: relative; padding-right: 40px; }
 .alert .close { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 18px; cursor: pointer; opacity: .6; }
 
-/* forms */
+/* form controls */
 .form-group { margin-bottom: 18px; }
 .form-group label { display: block; font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 6px; }
 .form-control { width: 100%; padding: 10px 14px; border: 2px solid #e8ecf1; border-radius: 8px; font-size: 14px; transition: border-color .2s; background: #fff; }
 .form-control:focus { outline: none; border-color: #667eea; }
 .form-row { display: grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap: 16px; }
 
-/* search/filter bar */
+/* filter bar */
 .filter-bar { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
 .filter-bar input, .filter-bar select { padding: 9px 14px; border: 2px solid #e8ecf1; border-radius: 8px; font-size: 14px; background: #fff; }
 .filter-bar input:focus, .filter-bar select:focus { outline: none; border-color: #667eea; }
 .filter-bar input { flex: 1; min-width: 200px; }
 
-/* empty state */
+/* empty state placeholder */
 .empty-state { text-align: center; padding: 60px 20px; color: #a0aec0; }
 .empty-state i { font-size: 64px; display: block; margin-bottom: 16px; color: #e2e8f0; }
 .empty-state h3 { font-size: 18px; color: #4a5568; margin-bottom: 8px; }
 
-/* pagination */
+/* pagination row */
 .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; padding: 20px 0; }
 .page-info { font-size: 14px; color: #718096; }
 
-/* report tables */
+/* report header and filter */
 .report-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
 .report-filter { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .report-filter input, .report-filter select { padding: 9px 14px; border: 2px solid #e8ecf1; border-radius: 8px; font-size: 14px; }
 
-/* rank badge */
+/* leaderboard rank badge */
 .rank { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; }
 .rank-1 { background: #f6ad55; }
 .rank-2 { background: #a0aec0; }
@@ -146,6 +146,10 @@ a { text-decoration: none; color: inherit; }
 
 @media (max-width: 768px) {
     .admin-main { margin-left: 0; padding: 16px; }
-    .admin-sidebar { display: none; }
+    .admin-sidebar { display: none; position: fixed; left: 0; top: 64px; z-index: 999; }
+    .admin-sidebar.open { display: flex; box-shadow: 4px 0 24px rgba(0,0,0,0.25); }
     .stats-grid { grid-template-columns: repeat(2,1fr); }
+    .admin-sidebar-toggle { display: flex !important; }
 }
+
+/* sidebar toggle handled by inline JS */

@@ -1,10 +1,10 @@
 <?php
 require_once '../config/config.php';
 
-// use a past timestamp to expire cookies when we clear them
+// past timestamp expires cookies immediately
 $past = time() - 86400;
 
-// clear the legacy remember_user cookie if it exists
+// clear legacy remember cookie
 if (isset($_COOKIE['remember_user'])) {
     setcookie('remember_user', '', [
         'expires'  => $past,
@@ -15,7 +15,7 @@ if (isset($_COOKIE['remember_user'])) {
     ]);
 }
 
-// clear the current remember_token cookie set by loginphp
+// clear remember_token cookie
 if (isset($_COOKIE['remember_token'])) {
     setcookie('remember_token', '', [
         'expires'  => $past,
@@ -26,10 +26,10 @@ if (isset($_COOKIE['remember_token'])) {
     ]);
 }
 
-// clear the session cookie using the same settings php originally used for it
+// expire session cookie using original PHP settings
 if (ini_get('session.use_cookies')) {
     $params = session_get_cookie_params();
-    // use the samesite from the actual session config or fall back to strict
+    // fall back to Strict if samesite not set
     $samesite = !empty($params['samesite']) ? $params['samesite'] : 'Strict';
     setcookie(session_name(), '', [
         'expires'  => $past,
@@ -41,16 +41,16 @@ if (ini_get('session.use_cookies')) {
     ]);
 }
 
-// empty the session array then destroy the session completely
+// clear then destroy session
 $_SESSION = [];
 session_destroy();
 
-// start a fresh session so we can carry the flash message across to login
+// new session needed to carry flash message to login
 session_start();
 $_SESSION['flash_message'] = 'You have been logged out successfully.';
 $_SESSION['flash_type']    = 'success';
 
-// send them to the login page
+// redirect to login
 header('Location: ' . SITE_URL . '/auth/login.php');
 exit();
 ?>

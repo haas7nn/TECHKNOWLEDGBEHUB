@@ -1,5 +1,5 @@
 <?php
-// create tutorial page where instructors fill in all the details for a new tutorial
+// create tutorial form for instructors
 
 require_once '../includes/auth-check.php';
 
@@ -85,10 +85,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Invalid difficulty level.';
         } elseif (!in_array($status, ['draft', 'published'])) {
             $error = 'Invalid status.';
-        // duration must be at least 1 minute if provided
+        // duration min 1 minute
         } elseif (!empty($duration_minutes) && $duration_minutes < 1) {
             $error = 'Duration must be at least 1 minute.';
-        // video url must be a valid youtube or vimeo embed link
+        // validate youtube or vimeo embed url
         } elseif (!empty($video_url) && !preg_match('/^https:\/\/(www\.)?(youtube\.com\/embed\/|youtu\.be\/|player\.vimeo\.com\/video\/)/', $video_url)) {
             $error = 'Video URL must be a valid YouTube or Vimeo embed URL (e.g. https://www.youtube.com/embed/VIDEO_ID).';
         } else {

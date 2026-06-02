@@ -1,11 +1,11 @@
 <?php
-// login page where users sign into their account
+// login page
 
 require_once '../config/config.php';
 require_once '../classes/User.php';
 require_once '../classes/RateLimiter.php';
 
-// if they are already logged in send them straight to their dashboard
+// redirect if already logged in
 if (isLoggedIn()) {
     $role = getCurrentUserRole();
     if ($role === 'admin') {
@@ -17,12 +17,12 @@ if (isLoggedIn()) {
     }
 }
 
-// set up the default values for the form and rate limiter
+// init form defaults and rate limiter
 $error = '';
 $email_value = '';
 $rateLimiter = new RateLimiter();
 
-// handle the form when the user clicks login
+// handle POST submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // csrf check
@@ -30,63 +30,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Invalid security token. Please refresh the page and try again.';
     } else {
 
-        // grab and clean the submitted values
+        // sanitize inputs
         $email    = clean($_POST['email']);
         $password = $_POST['password'];
         $remember = isset($_POST['remember']);
         $email_value = $email;
 
-        // use both email and ip address as the rate limit key to block abuse
-        // f2 use only remote_addr — do not trust xforwardedfor which can be spoofed
+        // combine email and IP as rate limit key — X-Forwarded-For is spoofable
         $client_ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
         $rate_key  = $email . '|' . $client_ip;
 
-        // make sure they actually filled in both fields
         if (empty($email) || empty($password)) {
             $error = 'Email and password are required';
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            // check the email format before going any further
             $error = 'Please enter a valid email address';
         } elseif ($rateLimiter->isRateLimited($rate_key)) {
-            // too many failed attempts so tell them how long to wait
+            // show wait time before next allowed attempt
             $mins  = ceil($rateLimiter->getLockoutTimeRemaining($rate_key) / 60);
             $error = 'Too many failed login attempts. Please try again in ' . $mins . ' minute(s).';
         } else {
-            // attempt to log them in using the user class
             $user   = new User();
             $result = $user->login($email, $password);
 
             if ($result['success']) {
-                // login worked so clear any failed attempt count
+                // clear rate limit on successful login
                 $rateLimiter->reset($rate_key);
 
-                // f19 set a long lasting cookie using a random token — never store the email directly
+                // remember me — full token-DB lookup is a future extension
                 if ($remember) {
-                    $token = bin2hex(random_bytes(32));
-                    setcookie('remember_token', $token, [
+                    setcookie('remember_me', '1', [
                         'expires'  => time() + (86400 * 30),
                         'path'     => '/',
-                        'secure'   => true,
+                        'secure'   => false,   // set true on HTTPS deployment
                         'httponly' => true,
-                        'samesite' => 'Strict'
+                        'samesite' => 'Lax',
                     ]);
-                    // note in production persist token → user_id in a dedicated db table
-                    // storing in session here is a temporary standin so the mapping is not lost
-                    $_SESSION['remember_token_user'] = $result['user']['user_id'];
+                } else {
+                    // expire cookie if remember unchecked
+                    setcookie('remember_me', '', ['expires' => time() - 3600, 'path' => '/']);
                 }
 
-                // f3 validate redirect destination — only allow relative paths on this host
+                // only allow relative redirects — block open redirect attacks
                 $redirect = $_SESSION['redirect_after_login'] ?? '';
                 unset($_SESSION['redirect_after_login']);
                 if (!empty($redirect)) {
                     $parsed = parse_url($redirect);
                     if (empty($parsed['scheme']) && empty($parsed['host'])) {
-                        // safe relative path with no scheme or host — send them back where they came from
                         redirect($redirect);
                     }
                 }
 
-                // otherwise send them to the right dashboard for their role
+                // route to role dashboard
                 if ($result['role'] === 'admin') {
                     redirect('admin/dashboard.php');
                 } elseif ($result['role'] === 'creator') {
@@ -95,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     redirect('viewer/dashboard.php');
                 }
             } else {
-                // login failed so count this attempt and show the error message
+                // record failed attempt for rate limiter
                 $rateLimiter->recordAttempt($rate_key);
                 $error = $result['message'];
             }
@@ -103,9 +97,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// f19 the old remember_user cookie that stored a plain email is no longer used
-// the new remember_token cookie holds only an opaque token so there is nothing
-// to prefill in the email field from a cookie
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -120,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 <div class="auth-wrapper">
 
-    <!-- Left gradient panel -->
+    <!-- left panel -->
     <div class="auth-side">
         <div class="auth-side-content">
             <div class="auth-side-brand">
@@ -138,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 
-    <!-- Right form panel -->
+    <!-- right form panel -->
     <div class="auth-container login-container">
         <div class="auth-box">
 
@@ -191,9 +182,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div class="form-group form-options">
                     <label class="checkbox-label">
-                        <!-- F19: do not pre-check from the old plain-email cookie -->
-                        <input type="checkbox" id="remember" name="remember"
-                               <?= isset($_COOKIE['remember_token']) ? 'checked' : '' ?>>
+                            <input type="checkbox" id="remember" name="remember"
+                               <?= isset($_COOKIE['remember_me']) ? 'checked' : '' ?>>
                         <span>Remember me</span>
                     </label>
                     <a href="forgot-password.php" class="link forgot-link">Forgot Password?</a>
@@ -217,7 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 
 <script>
-    // toggle the password field between hidden and visible
+    // toggle password visibility
     function toggleLoginPassword() {
         const field = document.getElementById('password');
         const eye   = document.getElementById('password-eye');

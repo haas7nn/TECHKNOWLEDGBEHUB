@@ -1,20 +1,20 @@
 <?php
-// my tutorials page showing all tutorials this instructor has created
+// show only own tutorials
 
 require_once '../includes/auth-check.php';
 require_once '../classes/Tutorial.php';
 
 $page_title = 'My Tutorials';
 
-// read the status filter and sort order from the url
+// read filter and sort from url
 $status_filter = isset($_GET['status']) ? clean($_GET['status']) : '';
 $sort = isset($_GET['sort']) ? clean($_GET['sort']) : 'newest';
 
-// fetch all tutorials belonging to this instructor filtered by status if one was selected
+// fetch own tutorials filtered by status
 $tutorial = new Tutorial();
 $my_tutorials = $tutorial->getByInstructor($current_user_id, $status_filter);
 
-// sort the tutorials in memory based on the chosen sort option
+// in-memory sort by chosen option
 usort($my_tutorials, function($a, $b) use ($sort) {
     switch($sort) {
         case 'oldest':
@@ -46,7 +46,7 @@ usort($my_tutorials, function($a, $b) use ($sort) {
 
         <main class="dashboard-main">
 
-            <!-- page heading showing the total tutorial count and a create button -->
+            <!-- page header with count and create button -->
             <div class="dashboard-header">
                 <div>
                     <h1><i class="fas fa-book"></i> My Tutorials</h1>
@@ -60,7 +60,7 @@ usort($my_tutorials, function($a, $b) use ($sort) {
 
             <?php displayFlashMessage(); ?>
 
-            <!-- filter bar for narrowing by status and sorting the results -->
+            <!-- status filter and sort bar -->
             <div class="filters-bar">
                 <div class="filter-group">
                     <label>Status:</label>
@@ -83,7 +83,7 @@ usort($my_tutorials, function($a, $b) use ($sort) {
                 </div>
             </div>
 
-            <!-- grid of tutorial cards or an empty state prompt if nothing has been created yet -->
+            <!-- tutorial cards grid -->
             <?php if (empty($my_tutorials)): ?>
                 <div class="empty-state-large">
                     <i class="fas fa-book-open"></i>
@@ -99,7 +99,7 @@ usort($my_tutorials, function($a, $b) use ($sort) {
                     <?php foreach ($my_tutorials as $tut): ?>
                         <div class="tutorial-card-large">
 
-                            <!-- thumbnail with a status badge overlaid -->
+                            <!-- thumbnail with status badge -->
                             <div class="tutorial-thumbnail">
                                 <?php if (!empty($tut['thumbnail'])): ?>
                                     <img src="<?= SITE_URL ?>/uploads/<?= e($tut['thumbnail']) ?>" alt="<?= e($tut['title']) ?>" onerror="this.onerror=null;this.src='<?= SITE_URL ?>/uploads/placeholder.svg'">
@@ -111,7 +111,7 @@ usort($my_tutorials, function($a, $b) use ($sort) {
                                 </span>
                             </div>
 
-                            <!-- card body with category, title, description and stats -->
+                            <!-- card body -->
                             <div class="tutorial-card-body">
                                 <span class="category-tag">
                                     <i class="fas fa-folder"></i>
@@ -120,7 +120,7 @@ usort($my_tutorials, function($a, $b) use ($sort) {
                                 <h3><?= e($tut['title']) ?></h3>
                                 <p><?= e(truncate($tut['short_description'], 120)) ?></p>
 
-                                <!-- views, rating and comment count row -->
+                                <!-- views rating and comment counts -->
                                 <div class="tutorial-meta">
                                     <span>
                                         <i class="fas fa-eye"></i>
@@ -137,7 +137,7 @@ usort($my_tutorials, function($a, $b) use ($sort) {
                                     </span>
                                 </div>
 
-                                <!-- footer with creation date and edit, view and delete action buttons -->
+                                <!-- date and action buttons -->
                                 <div class="tutorial-footer">
                                     <small class="text-muted">
                                         Created <?= timeAgo($tut['created_at']) ?>
@@ -163,7 +163,7 @@ usort($my_tutorials, function($a, $b) use ($sort) {
     </div>
 
     <script>
-        // filter reload
+        // reload with status filter
         function filterByStatus(status) {
             const currentUrl = new URL(window.location.href);
             if (status) {
@@ -174,17 +174,17 @@ usort($my_tutorials, function($a, $b) use ($sort) {
             window.location.href = currentUrl.toString();
         }
 
-        // sort reload
+        // reload with sort param
         function sortTutorials(sort) {
             const currentUrl = new URL(window.location.href);
             currentUrl.searchParams.set('sort', sort);
             window.location.href = currentUrl.toString();
         }
 
-        // confirm delete
+        // confirm then post delete
         function deleteTutorial(id, title) {
             if (!confirm('Archive "' + title + '"?\nIt will be removed from public view.')) return;
-            // post with csrf
+            // post with csrf token
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '<?= SITE_URL ?>/creator/delete-tutorial.php';

@@ -1,48 +1,43 @@
 <?php
-// forgot password page where users request a reset link by email
+// forgot password page
 
 require_once '../config/config.php';
 require_once '../classes/User.php';
 
-// if they are already logged in just send them to the home page
+// redirect if already logged in
 if (isLoggedIn()) {
     redirect('public/index.php');
 }
 
-// set up page title and default message variables
+// init page vars
 $page_title = 'Forgot Password';
 $error      = '';
 $success    = '';
 
-// handle the form when they click send reset instructions
+// handle POST submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // csrf check
     if (!verifyCsrfFromPost()) {
         $error = 'Invalid security token. Please refresh and try again.';
     } else {
-        // grab and clean the email they typed
+        // sanitize email input
         $email = clean($_POST['email'] ?? '');
 
-        // make sure the email is not empty and looks like a real address
         if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $error = 'Please enter a valid email address.';
         } else {
-            // look up the user by their email address
             $userObj = new User();
             $user    = $userObj->getUserByEmail($email);
 
-            // we always show the same success message whether the email exists or not
-            // this stops anyone from finding out which emails are registered
+            // same response whether email exists or not — prevents email enumeration
             if ($user && $user['status'] === 'active') {
-                // make token
-                // demo session token
+                // session-based token — no email sent in this demo
                 $token = bin2hex(random_bytes(32));
                 $_SESSION['reset_token']      = $token;
                 $_SESSION['reset_user_id']    = $user['user_id'];
                 $_SESSION['reset_expires_at'] = time() + 900; // 15 minutes
             }
 
-            // generic success
             $success = 'If your email is registered, you will receive a password reset link.';
         }
     }
@@ -145,11 +140,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div><!-- /auth-wrapper -->
 
 <script>
-// check the email field before the form is submitted
+// client-side email check before submit
 document.getElementById('forgotForm') && document.getElementById('forgotForm').addEventListener('submit', function(e) {
     const email = document.getElementById('email');
     const errEl = document.getElementById('email-error');
-    // stop submission if the field is empty
+    // block if empty
     if (!email.value.trim()) {
         e.preventDefault();
         errEl.textContent = 'Email address is required.';
@@ -157,7 +152,7 @@ document.getElementById('forgotForm') && document.getElementById('forgotForm').a
         email.classList.add('error');
         return;
     }
-    // also check that it looks like a real email address
+    // validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.value.trim())) {
         e.preventDefault();

@@ -1,5 +1,5 @@
 <?php
-// comments page showing all comments left on this creator's tutorials
+// comments on own tutorials
 
 require_once '../includes/auth-check.php';
 require_once '../classes/Tutorial.php';
@@ -14,12 +14,12 @@ if (!$conn) {
     redirect('creator/dashboard.php');
 }
 
-// load the creator's tutorials so we can get their ids
+// get own tutorial ids
 $tutObj       = new Tutorial();
 $my_tutorials = $tutObj->getByInstructor($current_user_id);
 $tutorial_ids = array_column($my_tutorials, 'tutorial_id');
 
-// default values for counts and the comment list
+// default counts and pagination vars
 $comments       = [];
 $total_approved = 0;
 $total_removed  = 0;
@@ -30,11 +30,11 @@ $offset         = ($page - 1) * $per_page;
 $total_comments = 0;
 $total_pages    = 1;
 
-// subquery identifies all tutorials belonging to this creator — avoids raw in() interpolation
+// safe subquery for own tutorials
 $subquery = "SELECT tutorial_id FROM dbProj_tutorials WHERE instructor_id = :uid";
 
 if (!empty($tutorial_ids)) {
-    // count approved and removed comments using the safe subquery pattern
+    // count approved and removed comments
     $badgeStmt = $conn->prepare(
         "SELECT status, COUNT(*) AS cnt
          FROM dbProj_comments
@@ -47,7 +47,7 @@ if (!empty($tutorial_ids)) {
         if ($row['status'] === 'removed')  $total_removed  = (int)$row['cnt'];
     }
 
-    // build the status condition for the tab filter
+    // build status filter condition
     $status_condition = '';
     $status_params    = [':uid' => $current_user_id];
     if ($status_filter === 'approved') {
@@ -56,7 +56,7 @@ if (!empty($tutorial_ids)) {
         $status_condition = "AND c.status = 'removed'";
     }
 
-    // count for pagination
+    // total count for pagination
     $countStmt = $conn->prepare(
         "SELECT COUNT(*) FROM dbProj_comments c
          WHERE c.tutorial_id IN ($subquery) $status_condition"
@@ -65,7 +65,7 @@ if (!empty($tutorial_ids)) {
     $total_comments = (int)$countStmt->fetchColumn();
     $total_pages    = max(1, (int)ceil($total_comments / $per_page));
 
-    // fetch one page of comments with commenter and tutorial details joined in
+    // fetch paginated comments with user and tutorial joined
     $listStmt = $conn->prepare(
         "SELECT c.comment_id, c.comment_text, c.status, c.created_at,
                 u.full_name    AS commenter_name,
@@ -85,7 +85,7 @@ if (!empty($tutorial_ids)) {
     $comments = $listStmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// total comment count used in the all tab badge
+// total for all tab badge
 $total_all = $total_approved + $total_removed;
 ?>
 <!DOCTYPE html>
@@ -139,7 +139,7 @@ $total_all = $total_approved + $total_removed;
 
         <?php displayFlashMessage(); ?>
 
-        <!-- tab links to filter by all, approved or removed comments -->
+        <!-- filter tabs -->
         <div class="filter-tabs">
             <a href="?status=all"      class="filter-tab <?= $status_filter==='all'      ?'active':'' ?>">
                 All <?php if ($total_all): ?><span class="badge-count"><?= $total_all ?></span><?php endif; ?>
@@ -153,7 +153,7 @@ $total_all = $total_approved + $total_removed;
         </div>
 
         <?php if (empty($tutorial_ids)): ?>
-            <!-- empty state when the creator has not published any tutorials yet -->
+            <!-- no tutorials yet -->
             <div class="empty-state">
                 <i class="fas fa-book-open"></i>
                 <h3>No Tutorials Yet</h3>
@@ -161,19 +161,19 @@ $total_all = $total_approved + $total_removed;
                 <a href="create-tutorial.php" class="btn btn-primary" style="margin-top:16px; display:inline-block;">Create Tutorial</a>
             </div>
         <?php elseif (empty($comments)): ?>
-            <!-- empty state when there are no comments matching the current filter -->
+            <!-- no comments for this filter -->
             <div class="empty-state">
                 <i class="fas fa-comment-slash"></i>
                 <h3>No Comments Found</h3>
                 <p>No comments match the selected filter.</p>
             </div>
         <?php else: ?>
-            <!-- comment count and pagination info above the list -->
+            <!-- count and page info -->
             <p style="font-size:13px; color:#7f8c8d; margin-bottom:16px;">
                 <?= $total_comments ?> comment(s)
                 <?php if ($total_pages > 1): ?> &mdash; page <?= $page ?> of <?= $total_pages ?><?php endif; ?>
             </p>
-            <!-- list of comment cards each with author, status badge, tutorial link and the comment text -->
+            <!-- comment cards -->
             <?php foreach ($comments as $c): ?>
             <div class="comment-card <?= e($c['status']) ?>">
                 <div class="comment-meta">
@@ -189,7 +189,7 @@ $total_all = $total_approved + $total_removed;
             </div>
             <?php endforeach; ?>
 
-            <!-- pagination controls shown when there are multiple pages -->
+            <!-- pagination nav -->
             <?php if ($total_pages > 1): ?>
             <?php $base = '?status=' . urlencode($status_filter); ?>
             <div style="display:flex;gap:10px;align-items:center;margin-top:20px;">

@@ -1,5 +1,5 @@
 <?php
-// settings page for account preferences and notification toggles
+// account preferences and notification toggles
 
 require_once '../includes/auth-check.php';
 require_once '../classes/User.php';
@@ -10,11 +10,11 @@ $page_title = 'Settings';
 $db   = new Database();
 $conn = $db->connect();
 
-// load the current user's profile
+// load user profile
 $userObj = new User();
 $profile = $userObj->getUserById($current_user_id);
 
-// f21 — guard against getuserbyid() returning false
+// guard against null profile
 if (!$profile) {
     setFlashMessage('Could not load profile.', 'error');
     redirect('creator/dashboard.php');
@@ -23,7 +23,7 @@ if (!$profile) {
 
 $errors  = [];
 
-// load existing settings from the session or fall back to sensible defaults
+// load settings from session with defaults
 $settings_key = 'creator_settings_' . $current_user_id;
 $settings = $_SESSION[$settings_key] ?? [
     'notify_comments'  => true,
@@ -35,26 +35,26 @@ $settings = $_SESSION[$settings_key] ?? [
     'default_difficulty' => 'beginner',
 ];
 
-// handle the settings save form submission
+// handle settings save
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
     if (!verifyCsrfFromPost()) {
         $errors[] = 'Invalid security token. Please refresh and try again.';
     } else {
-        // read each toggle and dropdown value from the post data
+        // read toggle and dropdown values
         $settings['notify_comments']    = isset($_POST['notify_comments']);
         $settings['notify_ratings']     = isset($_POST['notify_ratings']);
         $settings['notify_new_views']   = isset($_POST['notify_new_views']);
         $settings['profile_public']     = isset($_POST['profile_public']);
         $settings['show_email']         = isset($_POST['show_email']);
-        // only accept the known valid page size values
+        // whitelist page size values
         $settings['tutorials_per_page'] = in_array((int)($_POST['tutorials_per_page'] ?? 10), [5,10,20,50])
                                             ? (int)$_POST['tutorials_per_page'] : 10;
-        // only accept the known difficulty values
+        // whitelist difficulty values
         $settings['default_difficulty'] = in_array(clean($_POST['default_difficulty'] ?? ''), ['beginner','intermediate','advanced'])
                                             ? clean($_POST['default_difficulty']) : 'beginner';
 
         if (empty($errors)) {
-            // settings are stored in the session for this project (no settings column in schema)
+            // persist in session no db column for settings
             $_SESSION[$settings_key] = $settings;
             setFlashMessage('Settings saved successfully!', 'success');
             redirect('creator/settings.php');
@@ -62,19 +62,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
     }
 }
 
-// handle the account deletion request which requires password confirmation
+// handle account deletion request
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
     if (!verifyCsrfFromPost()) {
         $errors[] = 'Invalid security token.';
     } else {
-        // f9 — verify the current password with password_verify() before proceeding
-        // the post field is named current_password (see the modal form below)
+        // verify password before allowing deletion
         $current_password = $_POST['current_password'] ?? '';
 
         if (!$current_password || !password_verify($current_password, $profile['password_hash'])) {
             $errors[] = 'Current password is incorrect.';
         } else {
-            // password confirmed — actual deletion requires admin action so we note the request
+            // note request admin completes actual deletion
             setFlashMessage('Account deletion request noted. Please contact an administrator to complete this action.', 'info');
             redirect('creator/settings.php');
         }

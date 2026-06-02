@@ -1,15 +1,13 @@
 <?php
-// start output buffer
 // avoid early output
 ob_start();
 
-// set the page identifier so the admin sidebar can highlight the categories link
+// highlight sidebar link
 $page = 'categories';
 
 // admin only
 require_once '../includes/admin-check.php';
 
-// load the category class for all database operations
 require_once '../classes/Category.php';
 
 // db connect
@@ -20,15 +18,12 @@ if (!$conn) { setFlashMessage("Database error. Please try again.", "error"); red
 
 $categoryObj = new Category();
 
-// handle admin action
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrfFromPost()) {
-    // read which action and which category the admin targeted
     $action      = clean($_POST['action']      ?? '');
     $category_id = (int)($_POST['category_id'] ?? 0);
     $name        = trim(clean($_POST['name']   ?? ''));
 
     if ($action === 'add') {
-        // create a new category with the submitted name
         if ($name === '') {
             setFlashMessage('Category name cannot be empty.', 'error');
         } else {
@@ -41,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrfFromPost()) {
         }
 
     } elseif ($action === 'edit' && $category_id) {
-        // update the name of an existing category
+        // rename existing category
         if ($name === '') {
             setFlashMessage('Category name cannot be empty.', 'error');
         } else {
@@ -54,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrfFromPost()) {
         }
 
     } elseif ($action === 'delete' && $category_id) {
-        // delete the category only if no tutorials are assigned to it
+        // blocked if tutorials still assigned
         $ok = (bool)$categoryObj->delete($category_id);
         if ($ok) {
             setFlashMessage('Category deleted successfully.', 'success');
@@ -63,11 +58,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrfFromPost()) {
         }
     }
 
-    // redirect back
     redirect('admin/categories.php');
 }
 
-// load all categories with their tutorial counts for the table
+// load categories with tutorial counts
 $categories = $categoryObj->getAllWithCount();
 ?>
 <!DOCTYPE html><html lang="en"><head>
@@ -79,7 +73,6 @@ $categories = $categoryObj->getAllWithCount();
 <?php require_once '../includes/admin-nav.php'; ?>
 <div class="admin-wrap"><main class="admin-main">
 
-    <!-- page header -->
     <div class="page-header">
         <div>
             <h1><i class="fas fa-tags"></i> Manage Categories</h1>
@@ -88,7 +81,6 @@ $categories = $categoryObj->getAllWithCount();
     </div>
     <?php displayFlashMessage(); ?>
 
-    <!-- add category form -->
     <div class="admin-card" style="margin-bottom:24px;">
         <div class="admin-card-header"><h2 style="margin:0;font-size:1rem;"><i class="fas fa-plus"></i> Add New Category</h2></div>
         <div class="admin-card-body">
@@ -107,11 +99,9 @@ $categories = $categoryObj->getAllWithCount();
         </div>
     </div>
 
-    <!-- categories table -->
     <div class="admin-card">
         <div class="admin-card-body" style="padding:0;">
         <?php if (empty($categories)): ?>
-            <!-- friendly message when no categories exist yet -->
             <div class="empty-state"><i class="fas fa-tags"></i><h3>No categories found</h3><p>Add your first category using the form above.</p></div>
         <?php else: ?>
         <table class="admin-table">
@@ -124,10 +114,9 @@ $categories = $categoryObj->getAllWithCount();
             </thead>
             <tbody>
             <?php foreach ($categories as $cat): ?>
-            <!-- one row per category -->
             <tr>
                 <td>
-                    <!-- inline edit form — clicking Edit reveals the input pre-filled with the current name -->
+                    <!-- clicking Edit reveals pre-filled input -->
                     <span class="cat-label-<?= $cat['category_id'] ?>"><?= e($cat['category_name']) ?></span>
                     <form method="POST"
                           id="edit-form-<?= $cat['category_id'] ?>"
@@ -150,12 +139,11 @@ $categories = $categoryObj->getAllWithCount();
                     </form>
                 </td>
                 <td>
-                    <!-- show the count of published tutorials in this category -->
                     <span class="badge badge-info"><?= (int)$cat['tutorial_count'] ?> <?= (int)$cat['tutorial_count'] === 1 ? 'tutorial' : 'tutorials' ?></span>
                 </td>
                 <td>
                     <div style="display:flex;gap:6px;">
-                        <!-- edit button toggles the inline edit form -->
+                        <!-- toggle inline edit form -->
                         <button type="button"
                                 class="btn-icon"
                                 title="Edit"
@@ -163,7 +151,7 @@ $categories = $categoryObj->getAllWithCount();
                                 onclick="toggleEdit(<?= $cat['category_id'] ?>, true)">
                             <i class="fas fa-pencil-alt"></i>
                         </button>
-                        <!-- delete button only shown when the category has no tutorials assigned -->
+                        <!-- delete only if no tutorials assigned -->
                         <?php if ((int)$cat['tutorial_count'] === 0): ?>
                         <form method="POST" style="display:inline;"
                               onsubmit="return confirm('Delete category \'<?= e(addslashes($cat['category_name'])) ?>\'? This cannot be undone.')">
@@ -175,7 +163,7 @@ $categories = $categoryObj->getAllWithCount();
                             </button>
                         </form>
                         <?php else: ?>
-                        <!-- greyed-out delete icon with a tooltip explaining why it is disabled -->
+                        <!-- disabled delete — tutorials still use this category -->
                         <span class="btn-icon" title="Cannot delete: tutorials are assigned to this category"
                               style="opacity:.35;cursor:not-allowed;">
                             <i class="fas fa-trash"></i>
@@ -194,7 +182,7 @@ $categories = $categoryObj->getAllWithCount();
 </main></div>
 
 <script>
-// show or hide the inline edit form for a given category row
+// toggle inline edit form per category row
 function toggleEdit(id, show) {
     var form  = document.getElementById('edit-form-' + id);
     var label = document.querySelector('.cat-label-' + id);
@@ -211,7 +199,7 @@ function toggleEdit(id, show) {
     }
 }
 
-// make sure the edit name field is not blank before submitting
+// block blank name on submit
 function validateEditName(id) {
     var val = document.getElementById('edit-name-' + id).value.trim();
     if (!val) {

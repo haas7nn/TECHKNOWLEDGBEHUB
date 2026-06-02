@@ -1,5 +1,5 @@
 <?php
-// analytics page showing detailed performance stats for the creator's tutorials
+// creator analytics aggregation
 
 require_once '../includes/auth-check.php';
 require_once '../classes/Tutorial.php';
@@ -10,7 +10,7 @@ $page_title = 'Analytics';
 $db   = new Database();
 $conn = $db->connect();
 
-// set safe default values for all the stats we will calculate below
+// default stat values
 $my_tutorials  = [];
 $total_views   = 0;
 $total_ratings = 0;
@@ -20,17 +20,16 @@ $monthly_views  = [];
 $top_tutorials  = [];
 
 if ($conn) {
-    // load all tutorials for this instructor
+    // fetch own tutorials
     $tutObj = new Tutorial();
     $my_tutorials = $tutObj->getByInstructor($current_user_id);
 
-    // add up total views by looping through the tutorial list
+    // sum total views
     foreach ($my_tutorials as $t) {
         $total_views += (int)($t['view_count'] ?? 0);
     }
 
-    // get the overall average rating and total vote count from the ratings table
-    // subquery replaces the old in($inlist) to avoid sql injection and emptylist errors
+    // avg rating via safe subquery
     $rStmt = $conn->prepare(
         "SELECT COUNT(*) AS cnt, COALESCE(AVG(rating),0) AS avg
          FROM dbProj_ratings
@@ -44,7 +43,7 @@ if ($conn) {
     $total_ratings = (int)($rRow['cnt'] ?? 0);
     $avg_rating    = $total_ratings > 0 ? round((float)$rRow['avg'], 1) : 0;
 
-    // count the approved comments across all tutorials
+    // count approved comments
     $cStmt = $conn->prepare(
         "SELECT COUNT(*) FROM dbProj_comments
          WHERE tutorial_id IN (
@@ -55,7 +54,7 @@ if ($conn) {
     $cStmt->execute([':uid' => $current_user_id]);
     $total_comments = (int)($cStmt->fetchColumn() ?: 0);
 
-    // get monthly view counts from the activity table for the last six months
+    // monthly views last six months
     $mStmt = $conn->prepare(
         "SELECT DATE_FORMAT(activity_date,'%Y-%m') AS month, COUNT(*) AS views
          FROM dbProj_user_activity
@@ -71,13 +70,13 @@ if ($conn) {
     $mStmt->execute([':uid' => $current_user_id]);
     $monthly_views = $mStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // sort a copy by view count so the top five are found without disturbing the original order
+    // sort copy for top five without changing original
     $sorted = $my_tutorials;
     usort($sorted, fn($a,$b) => (int)$b['view_count'] - (int)$a['view_count']);
     $top_tutorials = array_slice($sorted, 0, 5);
 }
 
-// count how many tutorials are published and how many are still drafts
+// count published vs draft
 $published_count = count(array_filter($my_tutorials, fn($t) => $t['status'] === 'published'));
 $draft_count     = count(array_filter($my_tutorials, fn($t) => $t['status'] === 'draft'));
 ?>
@@ -91,7 +90,7 @@ $draft_count     = count(array_filter($my_tutorials, fn($t) => $t['status'] === 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 20px; margin-bottom: 28px; }
-        /* stat-card and stat-icon colour variants now defined in creator.css — no inline override needed */
+        /* stat colours live in creator.css */
         .stat-info h3 { font-size:24px; font-weight:700; margin:0 0 2px; color:#2c3e50; }
         .stat-info p  { font-size:12px; color:#7f8c8d; margin:0; }
         .two-col { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:24px; }
@@ -141,7 +140,7 @@ $draft_count     = count(array_filter($my_tutorials, fn($t) => $t['status'] === 
 
         <?php displayFlashMessage(); ?>
 
-        <!-- six summary stat cards showing views, tutorial count, avg rating, comments, published and drafts -->
+        <!-- six summary stat cards -->
         <div class="analytics-grid">
             <div class="stat-card">
                 <div class="stat-icon blue"><i class="fas fa-eye"></i></div>
@@ -172,9 +171,9 @@ $draft_count     = count(array_filter($my_tutorials, fn($t) => $t['status'] === 
             </div>
         </div>
 
-        <!-- two column row with top tutorials by views on the left and monthly view chart on the right -->
+        <!-- top tutorials and monthly views side by side -->
         <div class="two-col">
-            <!-- ranked list of the top five tutorials by view count -->
+            <!-- top five by views -->
             <div class="section-card">
                 <div class="section-header">
                     <h2><i class="fas fa-trophy" style="color:#f1c40f; margin-right:6px;"></i> Top by Views</h2>
@@ -185,7 +184,7 @@ $draft_count     = count(array_filter($my_tutorials, fn($t) => $t['status'] === 
                     <?php else:
                         $max_views = max(1, (int)($top_tutorials[0]['view_count'] ?? 1));
                         foreach ($top_tutorials as $i => $t):
-                            // assign gold silver and bronze classes to the top three rows
+                            // gold silver bronze rank classes
                             $rankClass = $i===0?'r1':($i===1?'r2':($i===2?'r3':''));
                             $pct = $max_views > 0 ? round((int)$t['view_count'] / $max_views * 100) : 0;
                     ?>
@@ -195,7 +194,7 @@ $draft_count     = count(array_filter($my_tutorials, fn($t) => $t['status'] === 
                                 <strong title="<?= e($t['title']) ?>"><?= e(truncate($t['title'],36)) ?></strong>
                                 <span><?= ucfirst(e($t['status'])) ?></span>
                             </div>
-                            <!-- progress bar showing this tutorial's views relative to the top one -->
+                            <!-- relative view bar -->
                             <div class="bar-wrap"><div class="bar-fill" style="width:<?= $pct ?>%;"></div></div>
                             <div class="tut-views"><i class="fas fa-eye"></i> <?= number_format($t['view_count']) ?></div>
                         </div>
@@ -203,7 +202,7 @@ $draft_count     = count(array_filter($my_tutorials, fn($t) => $t['status'] === 
                 </div>
             </div>
 
-            <!-- bar chart showing how many views each month in the last six months -->
+            <!-- monthly views bar chart -->
             <div class="section-card">
                 <div class="section-header">
                     <h2><i class="fas fa-calendar-alt" style="color:#667eea; margin-right:6px;"></i> Views Last 6 Months</h2>
@@ -216,7 +215,7 @@ $draft_count     = count(array_filter($my_tutorials, fn($t) => $t['status'] === 
                     ?>
                         <div class="chart-container">
                             <?php foreach ($monthly_views as $mv):
-                                // scale bar height relative to the busiest month
+                                // bar height scaled to busiest month
                                 $h = max(4, round($mv['views'] / $max_mv * 110));
                             ?>
                             <div class="chart-bar-group">
@@ -231,14 +230,14 @@ $draft_count     = count(array_filter($my_tutorials, fn($t) => $t['status'] === 
             </div>
         </div>
 
-        <!-- full table of all tutorials with their status, view count and action links -->
+        <!-- all tutorials performance table -->
         <div class="section-card">
             <div class="section-header">
                 <h2><i class="fas fa-list" style="margin-right:6px;"></i> All Tutorial Performance</h2>
                 <a href="create-tutorial.php" class="btn-small"><i class="fas fa-plus"></i> New</a>
             </div>
             <?php if (empty($my_tutorials)): ?>
-                <!-- empty state when the instructor has not created any tutorials yet -->
+                <!-- no tutorials yet -->
                 <div class="empty-note" style="padding:50px 20px;">
                     <i class="fas fa-book-open"></i>
                     <p>You haven't created any tutorials yet.</p>
@@ -263,7 +262,7 @@ $draft_count     = count(array_filter($my_tutorials, fn($t) => $t['status'] === 
                                 <div style="font-size:12px; color:#7f8c8d;"><?= formatDate($t['created_at']) ?></div>
                             </td>
                             <td style="padding:12px 16px; text-align:center;">
-                                <!-- colour the status badge green for published and orange for draft -->
+                                <!-- status badge colour -->
                                 <span style="padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600;
                                     background:<?= $t['status']==='published'?'#e8f8f0':'#fff3e0' ?>;
                                     color:<?= $t['status']==='published'?'#27ae60':'#f39c12' ?>;">
@@ -276,7 +275,7 @@ $draft_count     = count(array_filter($my_tutorials, fn($t) => $t['status'] === 
                             <td style="padding:12px 16px; text-align:center;">
                                 <a href="edit-tutorial.php?id=<?= $t['tutorial_id'] ?>" title="Edit" style="color:#667eea; margin:0 6px;"><i class="fas fa-edit"></i></a>
                                 <?php if ($t['status']==='published'): ?>
-                                <!-- view link only shows for published tutorials -->
+                                <!-- view link published only -->
                                 <a href="<?= SITE_URL ?>/viewer/tutorial-view.php?slug=<?= urlencode($t['slug']) ?>"
                                    title="View" style="color:#27ae60; margin:0 6px;" target="_blank">
                                     <i class="fas fa-external-link-alt"></i>

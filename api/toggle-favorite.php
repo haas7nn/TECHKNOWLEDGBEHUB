@@ -1,46 +1,45 @@
 <?php
-// api endpoint that adds or removes a tutorial from the user's favorites
-// uses a transaction to prevent duplicate rows if two clicks arrive at the same time
+// toggle favorite with transaction to prevent duplicate rows
 
 require_once '../config/config.php';
 
-// tell the browser this response is json
+// json response header
 header('Content-Type: application/json');
 
-// the user must be logged in to use the favorites feature
+// require login
 if (!isLoggedIn()) {
     echo json_encode(['success' => false, 'redirect' => SITE_URL . '/auth/login.php']);
     exit();
 }
 
-// read the json body that the browser sent with this request
+// parse json body
 $data = json_decode(file_get_contents('php://input'), true);
 
-// csrf check
+// validate csrf token
 if (!isset($data['csrf_token']) || !verifyCSRFToken($data['csrf_token'])) {
     echo json_encode(['success' => false, 'message' => 'Invalid security token']);
     exit();
 }
 
-// make sure the tutorial id is a positive integer
+// validate tutorial id
 $tutorial_id = (int)($data['tutorial_id'] ?? 0);
 if (!$tutorial_id) {
     echo json_encode(['success' => false, 'message' => 'Invalid tutorial']);
     exit();
 }
 
-// get the current user id and db connect
+// get user id and connect
 $user_id = getCurrentUserId();
 $db      = new Database();
 $conn    = $db->connect();
 
-// stop here if the database could not be reached
+// abort on db failure
 if (!$conn) {
     echo json_encode(['success' => false, 'message' => 'Database error']);
     exit();
 }
 
-// confirm the tutorial actually exists and is published before touching favorites
+// confirm tutorial exists and is published
 $exists = $conn->prepare(
     "SELECT tutorial_id FROM dbProj_tutorials
      WHERE tutorial_id = :id AND status = 'published' LIMIT 1"
@@ -53,10 +52,10 @@ if (!$exists->fetch()) {
 }
 
 try {
-    // wrap everything in a transaction so two simultaneous clicks cannot create duplicate rows
+    // transaction guards against duplicate rows from rapid clicks
     $conn->beginTransaction();
 
-    // lock the row while we check it so no other request can change it at the same time
+    // row lock prevents race condition
     $checkStmt = $conn->prepare(
         "SELECT activity_id FROM dbProj_user_activity
          WHERE user_id = :uid AND tutorial_id = :tid AND activity_type = 'favorite'
@@ -68,7 +67,7 @@ try {
     $existing = $checkStmt->fetch();
 
     if ($existing) {
-        // the user already favorited this tutorial so remove it
+        // already favorited — remove it
         $delStmt = $conn->prepare(
             "DELETE FROM dbProj_user_activity
              WHERE user_id = :uid AND tutorial_id = :tid AND activity_type = 'favorite'"
@@ -78,10 +77,10 @@ try {
         $delStmt->execute();
 
         $conn->commit();
-        // tell the browser the tutorial is no longer favorited
+        // response: now unfavorited
         echo json_encode(['success' => true, 'favorited' => false]);
     } else {
-        // the user has not favorited this yet so insert a new row
+        // not yet favorited — insert new row
         $insStmt = $conn->prepare(
             "INSERT INTO dbProj_user_activity (user_id, tutorial_id, activity_type, activity_date)
              VALUES (:uid, :tid, 'favorite', NOW())"
@@ -91,12 +90,11 @@ try {
         $insStmt->execute();
 
         $conn->commit();
-        // tell the browser the tutorial is now favorited
+        // response: now favorited
         echo json_encode(['success' => true, 'favorited' => true]);
     }
 
 } catch (PDOException $e) {
-    // something went wrong so roll back to keep the data clean
     $conn->rollBack();
     echo json_encode(['success' => false, 'message' => 'Database error. Please try again.']);
 }

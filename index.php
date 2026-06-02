@@ -1,11 +1,9 @@
 <?php
-// root landing page
-// logged in users go straight to their dashboard
-// guests see the landing page with login and browse options
+// root landing — logged-in users redirect guests see the landing
 
 require_once 'config/config.php';
 
-// redirect by role
+// role-based redirect for logged-in users
 if (isLoggedIn()) {
     $role = getCurrentUserRole();
     if ($role === 'admin')        redirect('admin/dashboard.php');
@@ -13,7 +11,7 @@ if (isLoggedIn()) {
     else                          redirect('viewer/dashboard.php');
 }
 
-// get stats and featured
+// fetch stats and featured tutorials
 $db   = new Database();
 $conn = $db->connect();
 
@@ -25,14 +23,14 @@ $latest           = [];
 $categories       = [];
 
 if ($conn) {
-    // published count
+    // published tutorial count
     $total_tutorials  = $conn->query("SELECT COUNT(*) FROM dbProj_tutorials WHERE status='published'")->fetchColumn();
-    // category count
+    // total categories
     $total_categories = $conn->query("SELECT COUNT(*) FROM dbProj_categories")->fetchColumn();
-    // viewer count
+    // active student count
     $total_students   = $conn->query("SELECT COUNT(*) FROM dbProj_users WHERE role='viewer' AND status='active'")->fetchColumn();
 
-    // get top 3 tutorials
+    // top 3 by view count
     $stmt = $conn->prepare(
         "SELECT t.tutorial_id, t.title, t.slug, t.thumbnail, t.short_description,
                 t.difficulty, t.view_count, t.duration_minutes,
@@ -51,7 +49,7 @@ if ($conn) {
     $stmt->execute();
     $featured = $stmt->fetchAll();
 
-    // get latest 6 published tutorials (reverse chronological — satisfies req 1.2)
+    // latest 6 published newest first
     $latestStmt = $conn->prepare(
         "SELECT t.tutorial_id, t.title, t.slug, t.thumbnail, t.short_description,
                 t.difficulty, t.view_count, t.duration_minutes, t.published_at,
@@ -70,7 +68,7 @@ if ($conn) {
     $latestStmt->execute();
     $latest = $latestStmt->fetchAll();
 
-    // get all categories
+    // all categories
     $categories = $conn->query(
         "SELECT category_id, category_name, icon FROM dbProj_categories ORDER BY category_name"
     )->fetchAll();
@@ -86,8 +84,6 @@ if ($conn) {
     <link rel="stylesheet" href="<?= asset('css/search.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-    /* landing page extras not covered by search.css */
-
     /* stats strip */
     .stats-strip {
         display: flex;
@@ -183,7 +179,7 @@ if ($conn) {
         margin: 0 auto 36px;
     }
 
-    /* CTA strip at the bottom */
+    /* bottom cta strip */
     .cta-strip {
         background: var(--c-gradient);
         text-align: center;
@@ -226,7 +222,7 @@ if ($conn) {
         background: rgba(255,255,255,.08);
     }
 
-    /* hero tweaks: bigger text, 3 CTA buttons */
+    /* hero cta buttons */
     .hero-actions {
         display: flex;
         justify-content: center;
@@ -288,7 +284,7 @@ if ($conn) {
     }
     .btn-hero-ghost:hover { color: #fff; text-decoration-color: rgba(255,255,255,.75); }
 
-    /* featured card style reused from search.css */
+    /* featured card */
     .feat-card {
         background: var(--c-surface);
         border-radius: var(--r-lg);
@@ -394,7 +390,7 @@ if ($conn) {
 </head>
 <body>
 
-<!-- public navigation bar -->
+<!-- public nav -->
 <div class="site-topbar">
     <div class="navbar-brand">
         <a href="<?= SITE_URL ?>">
@@ -415,7 +411,7 @@ if ($conn) {
     </div>
 </div>
 
-<!-- hero section -->
+<!-- hero -->
 <div class="site-hero" style="padding: 80px 24px 70px;">
     <h1 style="font-size: 46px; font-weight: 800; margin-bottom: 16px; letter-spacing: -.03em;">
         Learn. Build. Grow.
@@ -426,22 +422,22 @@ if ($conn) {
     </p>
 
     <div class="hero-actions">
-        <!-- primary: get started -->
+        <!-- register cta -->
         <a href="<?= SITE_URL ?>/auth/register.php" class="btn-hero-primary">
             <i class="fas fa-rocket" aria-hidden="true"></i> Get Started Free
         </a>
-        <!-- secondary: login -->
+        <!-- login cta -->
         <a href="<?= SITE_URL ?>/auth/login.php" class="btn-hero-secondary">
             <i class="fas fa-sign-in-alt" aria-hidden="true"></i> Login
         </a>
-        <!-- ghost: browse without signing in -->
+        <!-- guest browse link -->
         <a href="<?= SITE_URL ?>/public/search.php" class="btn-hero-ghost">
             Browse without signing in <i class="fas fa-arrow-right" aria-hidden="true"></i>
         </a>
     </div>
 </div>
 
-<!-- stats strip -->
+<!-- site stats -->
 <div class="stats-strip">
     <div class="stat-item">
         <i class="fas fa-book-open" aria-hidden="true"></i>
@@ -465,7 +461,7 @@ if ($conn) {
     </div>
 </div>
 
-<!-- category pills -->
+<!-- category browse pills -->
 <?php if (!empty($categories)): ?>
 <div class="categories-strip">
     <?php foreach ($categories as $cat): ?>
@@ -477,7 +473,7 @@ if ($conn) {
 </div>
 <?php endif; ?>
 
-<!-- latest tutorials (reverse chronological — newest first, per req 1.2) -->
+<!-- latest tutorials newest first -->
 <?php if (!empty($latest)): ?>
 <div class="featured-section" style="background:var(--c-surface);border-bottom:1px solid var(--c-border);">
     <h2>Latest Tutorials</h2>
@@ -535,7 +531,7 @@ if ($conn) {
 </div>
 <?php endif; ?>
 
-<!-- featured tutorials -->
+<!-- popular tutorials -->
 <?php if (!empty($featured)): ?>
 <div class="featured-section">
     <h2>Popular Tutorials</h2>
@@ -589,7 +585,7 @@ if ($conn) {
 </div>
 <?php endif; ?>
 
-<!-- bottom CTA -->
+<!-- bottom cta -->
 <div class="cta-strip">
     <h2>Ready to start learning?</h2>
     <p>Create a free account to track your progress, rate tutorials and join the community</p>

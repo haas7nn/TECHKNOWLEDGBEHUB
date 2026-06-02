@@ -1,32 +1,32 @@
 <?php
-// profile page where creators can update their name bio avatar and password
+// creator profile page for name bio avatar and password
 
 require_once '../includes/auth-check.php';
 require_once '../classes/User.php';
 
 $page_title = 'My Profile';
 
-// load the user object and fetch the current profile data
+// fetch current profile data
 $userObj = new User();
 $profile = $userObj->getUserById($current_user_id);
 
 $errors   = [];
 $success  = '';
 
-// handle the profile update form submission
+// handle profile update form
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     if (!verifyCsrfFromPost()) {
         $errors[] = 'Invalid security token. Please refresh and try again.';
     } else {
-        // read and sanitize the submitted profile fields
+        // sanitize submitted fields
         $full_name = clean($_POST['full_name'] ?? '');
         $bio       = clean($_POST['bio']       ?? '');
 
-        // validate the name length
+        // name length check
         if (strlen($full_name) < 3) {
             $errors[] = 'Full name must be at least 3 characters.';
         }
-        // validate the bio length
+        // bio length check
         if (strlen($bio) > 500) {
             $errors[] = 'Bio must not exceed 500 characters.';
         }
@@ -34,13 +34,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
         if (empty($errors)) {
             $data = ['full_name' => $full_name, 'bio' => $bio];
 
-            // handle a profile picture upload if one was included
+            // handle avatar upload if provided
             if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
                 $file = $_FILES['profile_picture'];
                 if ($file['size'] > 2 * 1024 * 1024) {
                     $errors[] = 'Profile picture must be under 2 MB.';
                 } else {
-                    // magicbyte validation confirm the file is a real image regardless of extension
+                    // magic byte check not just extension
                     $imageInfo = getimagesize($file['tmp_name']);
                     if ($imageInfo === false) {
                         $errors[] = 'Invalid image file.';
@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
                         if (!in_array($imageInfo['mime'], $allowedMimes)) {
                             $errors[] = 'Only JPEG, PNG, GIF, and WebP images are allowed.';
                         } else {
-                            // derive extension from the verified mime type not the usersupplied filename
+                            // use mime type not user filename for extension
                             $mimeExtMap = [
                                 'image/jpeg' => 'jpg',
                                 'image/png'  => 'png',
@@ -61,12 +61,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
                             $avatarsDir = rtrim(UPLOAD_PATH, '/\\') . DIRECTORY_SEPARATOR . 'avatars';
                             $dest       = $avatarsDir . DIRECTORY_SEPARATOR . $filename;
 
-                            // ensure the avatars directory exists
+                            // create avatars dir if missing
                             if (!is_dir($avatarsDir)) {
                                 mkdir($avatarsDir, 0755, true);
                             }
 
-                            // f11 — block php execution inside the avatars directory
+                            // block PHP execution in avatars dir
                             $blocker = $avatarsDir . '/index.php';
                             if (!file_exists($blocker)) {
                                 file_put_contents($blocker, '<?php // Silence is golden');
@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
                                 file_put_contents($htaccess, "php_flag engine off\nOptions -Indexes\n");
                             }
 
-                            // move the uploaded file to the avatars folder
+                            // move upload to avatars folder
                             if (move_uploaded_file($file['tmp_name'], $dest)) {
                                 $data['profile_picture'] = 'avatars/' . $filename;
                             } else {
@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
 
             if (empty($errors)) {
                 if ($userObj->updateProfile($current_user_id, $data)) {
-                    // update the session name so the nav bar shows the new name straight away
+                    // sync session name for nav bar
                     $_SESSION['full_name'] = $full_name;
                     $current_user_name     = $full_name;
                     setFlashMessage('Profile updated successfully!', 'success');
@@ -100,27 +100,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
             }
         }
     }
-    // refetch the profile after an update attempt so the form shows current data
+    // refetch so form shows fresh data
     $profile = $userObj->getUserById($current_user_id);
 }
 
-// handle the password change form submission
+// handle password change form
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     if (!verifyCsrfFromPost()) {
         $errors[] = 'Invalid security token. Please refresh and try again.';
     } else {
-        // read all three password fields
+        // read password fields
         $old_pass  = $_POST['old_password']   ?? '';
         $new_pass  = $_POST['new_password']   ?? '';
         $conf_pass = $_POST['confirm_password'] ?? '';
 
-        // all three fields are required
+        // all fields required
         if (empty($old_pass) || empty($new_pass) || empty($conf_pass)) {
             $errors[] = 'All password fields are required.';
         } elseif ($new_pass !== $conf_pass) {
             $errors[] = 'New password and confirmation do not match.';
         } else {
-            // run the password strength rules before trying to change it
+            // check password strength first
             $pwCheck = validatePassword($new_pass);
             if (!$pwCheck['valid']) {
                 $errors[] = $pwCheck['message'];
@@ -137,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     }
 }
 
-// build the avatar url or leave it empty if the user has no profile picture
+// build avatar url if set
 $avatar_url = !empty($profile['profile_picture'])
     ? SITE_URL . '/uploads/' . ltrim($profile['profile_picture'], '/')
     : '';
@@ -306,14 +306,14 @@ $avatar_url = !empty($profile['profile_picture'])
 </div>
 
 <script>
-// bio character counter that updates as the user types
+// bio character counter
 const bioTxt   = document.getElementById('bio');
 const bioCount = document.getElementById('bio-count');
 function updateCount() { bioCount.textContent = bioTxt.value.length; }
 bioTxt.addEventListener('input', updateCount);
 updateCount();
 
-// live password match hint shown below the confirmation field
+// live password match hint
 const newPw  = document.getElementById('new_password');
 const confPw = document.getElementById('confirm_password');
 const hint   = document.getElementById('pw-match-hint');
@@ -331,7 +331,7 @@ function checkMatch() {
 newPw.addEventListener('input', checkMatch);
 confPw.addEventListener('input', checkMatch);
 
-// stop the password form from submitting if the two new password fields do not match
+// block submit if passwords mismatch
 document.getElementById('pwForm').addEventListener('submit', function(e) {
     if (newPw.value !== confPw.value) {
         e.preventDefault();

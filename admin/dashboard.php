@@ -16,7 +16,6 @@ foreach ([
     'comments'  => "SELECT COUNT(*) FROM dbProj_comments WHERE status='approved'",
     'ratings'   => "SELECT COUNT(*) FROM dbProj_ratings",
 ] as $key => $sql) {
-    // run each count query and store the result by its key name
     $q = $conn->query($sql);
     $counts[$key] = $q ? $q->fetchColumn() : 0;
 }
@@ -48,14 +47,13 @@ $newUsers = $q ? $q->fetchAll() : [];
 <div class="admin-wrap">
     <main class="admin-main">
 
-        <!-- page title and welcome message -->
         <div class="page-header">
             <div><h1><i class="fas fa-tachometer-alt"></i> Dashboard</h1><p>Welcome back, <?= e($current_user_name) ?></p></div>
         </div>
 
         <?php displayFlashMessage(); ?>
 
-        <!-- four stat cards showing key site numbers -->
+        <!-- stat cards for key site numbers -->
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-icon si-purple"><i class="fas fa-users"></i></div>
@@ -75,7 +73,6 @@ $newUsers = $q ? $q->fetchAll() : [];
             </div>
         </div>
 
-        <!-- two side by side tables for recent tutorials and new users -->
         <div class="admin-grid-2">
 
         <!-- recent tutorials table -->
@@ -89,11 +86,10 @@ $newUsers = $q ? $q->fetchAll() : [];
                     <thead><tr><th>Title</th><th>Instructor</th><th>Status</th><th>Date</th></tr></thead>
                     <tbody>
                     <?php foreach ($recent as $t): ?>
-                        <!-- one row per tutorial -->
                         <tr>
                             <td><?= e(truncate($t['title'],40)) ?></td>
                             <td><?= e($t['instructor']) ?></td>
-                            <!-- pick a badge colour based on status -->
+                            <!-- badge colour by status -->
                             <td><span class="badge badge-<?= $t['status']==='published'?'success':($t['status']==='draft'?'warning':'gray') ?>"><?= ucfirst($t['status']) ?></span></td>
                             <td style="font-size:12px;color:#718096;"><?= formatDate($t['created_at']) ?></td>
                         </tr>
@@ -114,13 +110,12 @@ $newUsers = $q ? $q->fetchAll() : [];
                     <thead><tr><th>Name</th><th>Role</th><th>Joined</th></tr></thead>
                     <tbody>
                     <?php foreach ($newUsers as $u): ?>
-                        <!-- one row per user showing their name email role and join date -->
                         <tr>
                             <td>
                                 <strong><?= e($u['full_name']) ?></strong><br>
                                 <small style="color:#718096;"><?= e($u['email']) ?></small>
                             </td>
-                            <!-- badge colour differs by role -->
+                            <!-- badge colour by role -->
                             <td><span class="badge badge-<?= $u['role']==='admin'?'danger':($u['role']==='creator'?'purple':'info') ?>"><?= ucfirst($u['role']) ?></span></td>
                             <td style="font-size:12px;color:#718096;"><?= formatDate($u['created_at']) ?></td>
                         </tr>

@@ -1,11 +1,11 @@
 <?php
-// public search and browse page that anyone can visit without logging in
+// public search open to guests and logged-in users
 
 require_once '../config/config.php';
 require_once '../classes/Tutorial.php';
 require_once '../classes/Category.php';
 
-// get filters
+// read filter params from url
 $search_query  = isset($_GET['q'])          ? clean($_GET['q'])          : '';
 $category_id   = isset($_GET['category'])   ? (int)$_GET['category']    : 0;
 $difficulty    = isset($_GET['difficulty']) ? clean($_GET['difficulty']) : '';
@@ -15,7 +15,7 @@ $date_to       = isset($_GET['date_to'])    ? clean($_GET['date_to'])    : '';
 $instructor_id = isset($_GET['instructor']) ? (int)$_GET['instructor']   : 0;
 $page          = isset($_GET['page'])       ? max(1, (int)$_GET['page']) : 1;
 
-// w1 — validate dates reject any value that is not a real ymd date
+// validate date inputs reject non-ymd values
 $date_filter_error = '';
 if ($date_from !== '') {
     $date_from_parsed = DateTime::createFromFormat('Y-m-d', $date_from);
@@ -36,19 +36,19 @@ if ($date_from !== '' && $date_to !== '' && $date_from > $date_to) {
     $date_filter_error = '"Date to" must be on or after "Published from" — it has been ignored.';
 }
 
-// set the page title depending on whether a search term was given
+// page title based on active search
 $page_title = $search_query ? 'Search Results' : 'Browse Tutorials';
 
-// load all categories for the filter dropdown
+// categories for filter dropdown
 $categoryObj = new Category();
 $categories  = $categoryObj->getAll();
 
-// db connect
+// db connection
 $db   = new Database();
 $conn = $db->connect();
 $instructors = [];
 if ($conn) {
-    // fetch all active creator accounts sorted by name
+    // active creators for instructor dropdown
     $iStmt = $conn->prepare(
         "SELECT user_id, full_name FROM dbProj_users
          WHERE role = 'creator' AND status = 'active'
@@ -58,7 +58,7 @@ if ($conn) {
     $instructors = $iStmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// build the filter array from only the values that were actually provided
+// build filter params from provided values only
 $tutorial = new Tutorial();
 $filters  = ['sort' => $sort];
 if (!empty($search_query)) $filters['search']       = $search_query;
@@ -68,7 +68,7 @@ if ($instructor_id > 0)    $filters['instructor_id'] = $instructor_id;
 if (!empty($date_from))    $filters['date_from']    = $date_from;
 if (!empty($date_to))      $filters['date_to']      = $date_to;
 
-// run the search and grab the tutorials and pagination info
+// run search get tutorials and pagination
 $search_results = $tutorial->search($filters, $page, 12);
 $tutorials      = $search_results['tutorials'] ?? [];
 $pagination     = $search_results['pagination'] ?? [
@@ -78,7 +78,7 @@ $pagination     = $search_results['pagination'] ?? [
     'items_per_page' => 12,
 ];
 
-// build a query string from all active filters for use in pagination links
+// build pagination query string from active filters
 $paginationParams = http_build_query(array_filter([
     'q'          => $search_query,
     'category'   => $category_id ?: '',
@@ -89,7 +89,7 @@ $paginationParams = http_build_query(array_filter([
     'date_to'    => $date_to,
 ]));
 
-// flag used to decide whether to show the hero banner or a filter summary heading
+// hide hero when filters active
 $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_id || $date_from || $date_to;
 ?>
 <!DOCTYPE html>
@@ -103,7 +103,7 @@ $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <!-- top navigation bar with links that change based on the user role -->
+    <!-- role-aware top nav -->
     <div class="site-topbar">
         <div class="navbar-brand">
             <a href="<?= SITE_URL ?>">
@@ -113,7 +113,7 @@ $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_
         </div>
         <div class="nav-links">
             <?php if (isLoggedIn()):
-                // check the logged in user role to show the right nav links
+                // role-based nav links
                 $__role = getCurrentUserRole();
                 if ($__role === 'admin'): ?>
                     <a href="<?= SITE_URL ?>/admin/dashboard.php"><i class="fas fa-tachometer-alt"></i> Admin Panel</a>
@@ -127,12 +127,12 @@ $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_
                 <?php endif; ?>
                 <a href="<?= SITE_URL ?>/auth/logout.php" class="nav-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
             <?php else: ?>
-                <!-- show login and register links to guests -->
+                <!-- guest login and register -->
                 <a href="<?= SITE_URL ?>/auth/login.php"><i class="fas fa-sign-in-alt"></i> Login</a>
                 <a href="<?= SITE_URL ?>/auth/register.php" class="nav-btn"><i class="fas fa-user-plus"></i> Register</a>
             <?php endif; ?>
 
-            <!-- browse by category dropdown available to all visitors -->
+            <!-- category dropdown -->
             <?php if (!empty($categories)): ?>
             <div class="nav-dropdown-wrapper" style="position:relative;display:inline-block;">
                 <button class="nav-cat-toggle"
@@ -177,7 +177,7 @@ $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_
     </script>
 
     <?php if (!$hasActiveFilters && $page === 1): ?>
-    <!-- hero banner shown only on the first visit when no filters are active -->
+    <!-- hero shown when no filters and page 1 -->
     <div class="site-hero">
         <h1><i class="fas fa-graduation-cap"></i> TechKnowledge Hub</h1>
         <p>Discover expert tutorials on Web Development, Databases, Programming &amp; more</p>
@@ -191,7 +191,7 @@ $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_
     <div class="search-page">
         <div class="container">
 
-            <!-- heading that changes based on whether a search or filter is active -->
+            <!-- dynamic heading -->
             <div class="search-header">
                 <h1>
                     <?php if ($search_query): ?>
@@ -205,11 +205,11 @@ $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_
                 <p><?= $pagination['total_items'] ?> tutorial<?= $pagination['total_items'] !== 1 ? 's' : '' ?> found</p>
             </div>
 
-            <!-- search and filter form -->
+            <!-- filter form -->
             <div class="search-filters">
                 <form method="GET" action="" class="filter-form" id="searchFilterForm">
 
-                    <!-- text search row -->
+                    <!-- text search -->
                     <div class="filter-row">
                         <div class="search-input-wrapper">
                             <i class="fas fa-search" aria-hidden="true"></i>
@@ -228,7 +228,7 @@ $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_
                         </button>
                     </div>
 
-                    <!-- category creator difficulty and sort dropdowns -->
+                    <!-- filter dropdowns row -->
                     <div class="filter-row filter-row-selects">
                         <div class="filter-group">
                             <label for="filter-category" class="filter-label">Category</label>
@@ -275,7 +275,7 @@ $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_
                         </div>
                     </div>
 
-                    <!-- date range filter row -->
+                    <!-- date range filter -->
                     <div class="filter-row filter-row-dates">
                         <label for="date_from" class="date-label">
                             <i class="fas fa-calendar-alt" aria-hidden="true"></i> Published from:
@@ -286,13 +286,13 @@ $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_
                         <button type="submit" class="btn btn-outline btn-sm">
                             <i class="fas fa-filter" aria-hidden="true"></i> Apply Dates
                         </button>
-                        <!-- clear all button only shown when at least one filter is active -->
+                        <!-- clear all when filters active -->
                         <?php if ($hasActiveFilters): ?>
                             <a href="search.php" class="btn btn-outline btn-sm">
                                 <i class="fas fa-times" aria-hidden="true"></i> Clear All
                             </a>
                         <?php endif; ?>
-                        <!-- inline error message for invalid date ranges (server-side or JS) -->
+                        <!-- server-side date range error -->
                         <?php if (!empty($date_filter_error)): ?>
                             <span class="date-range-error" role="alert"><?= e($date_filter_error) ?></span>
                         <?php endif; ?>
@@ -302,9 +302,9 @@ $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_
                 </form>
             </div>
 
-            <!-- results section -->
+            <!-- results -->
             <?php if (empty($tutorials)): ?>
-                <!-- shown when the search or filter returned nothing -->
+                <!-- empty results state -->
                 <div class="no-results">
                     <i class="fas fa-search"></i>
                     <h2>No tutorials found</h2>
@@ -312,16 +312,16 @@ $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_
                     <a href="search.php" class="btn btn-primary">Clear Filters</a>
                 </div>
             <?php else: ?>
-                <!-- grid of tutorial cards -->
+                <!-- tutorials grid -->
                 <div class="tutorials-grid">
                     <?php foreach ($tutorials as $tut): ?>
-                        <!-- one card per tutorial -->
+                        <!-- tutorial card -->
                         <div class="tutorial-card">
                             <div class="card-image">
                                 <?php if (!empty($tut['thumbnail'])): ?>
                                     <img src="<?= SITE_URL ?>/uploads/<?= e($tut['thumbnail']) ?>" alt="<?= e($tut['title']) ?>" onerror="this.onerror=null;this.src='<?= SITE_URL ?>/uploads/placeholder.svg'">
                                 <?php else: ?>
-                                    <!-- placeholder icon when the tutorial has no thumbnail -->
+                                    <!-- no thumbnail fallback -->
                                     <div class="card-image-placeholder">
                                         <i class="fas fa-book" aria-hidden="true"></i>
                                     </div>
@@ -340,7 +340,7 @@ $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_
                                 </h3>
                                 <p><?= e(truncate($tut['short_description'], 120)) ?></p>
 
-                                <!-- meta info row showing instructor rating and view count -->
+                                <!-- meta row -->
                                 <div class="card-meta">
                                     <span><i class="fas fa-user"></i> <?= e($tut['instructor_name']) ?></span>
                                     <span><i class="fas fa-star"></i> <?= number_format((float)($tut['avg_rating'] ?? 0), 1) ?></span>
@@ -355,14 +355,14 @@ $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_
                     <?php endforeach; ?>
                 </div>
 
-                <!-- pagination shown only when there are multiple pages -->
+                <!-- pagination -->
                 <?php if ($pagination['total_pages'] > 1):
                     $total = $pagination['total_pages'];
                     $start = max(1, $page - 2);
                     $end   = min($total, $page + 2);
                 ?>
                     <nav class="pagination" aria-label="Tutorial pages">
-                        <!-- previous page link -->
+                        <!-- prev page -->
                         <?php if ($page > 1): ?>
                             <a href="?<?= $paginationParams ?>&page=<?= $page - 1 ?>"
                                class="pagination-btn" aria-label="Previous page">
@@ -370,7 +370,7 @@ $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_
                             </a>
                         <?php endif; ?>
 
-                        <!-- link to the first page and an ellipsis if needed -->
+                        <!-- first page with ellipsis -->
                         <?php if ($start > 1): ?>
                             <a href="?<?= $paginationParams ?>&page=1" class="pagination-btn">1</a>
                             <?php if ($start > 2): ?>
@@ -378,7 +378,7 @@ $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_
                             <?php endif; ?>
                         <?php endif; ?>
 
-                        <!-- numbered page links around the current page -->
+                        <!-- numbered page links -->
                         <?php for ($i = $start; $i <= $end; $i++): ?>
                             <a href="?<?= $paginationParams ?>&page=<?= $i ?>"
                                class="pagination-btn<?= $i === $page ? ' active' : '' ?>"
@@ -387,7 +387,7 @@ $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_
                             </a>
                         <?php endfor; ?>
 
-                        <!-- ellipsis and link to the last page if needed -->
+                        <!-- last page with ellipsis -->
                         <?php if ($end < $total): ?>
                             <?php if ($end < $total - 1): ?>
                                 <span class="pagination-ellipsis">&hellip;</span>
@@ -396,7 +396,7 @@ $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_
                                class="pagination-btn"><?= $total ?></a>
                         <?php endif; ?>
 
-                        <!-- next page link -->
+                        <!-- next page -->
                         <?php if ($page < $total): ?>
                             <a href="?<?= $paginationParams ?>&page=<?= $page + 1 ?>"
                                class="pagination-btn" aria-label="Next page">
@@ -411,23 +411,22 @@ $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_
 
 <script>
 (function () {
-    // grab the form and the date fields so we can validate them before submitting
+    // grab form and date fields for validation
     var form   = document.getElementById('searchFilterForm');
     var dfrom  = document.getElementById('date_from');
     var dto    = document.getElementById('date_to');
     var errEl  = document.getElementById('date-range-error');
     var subBtn = document.getElementById('searchSubmitBtn');
 
-    // check that the to date is not earlier than the from date
     function validateDates() {
-        // skip the check if either date field is empty
+        // skip if either field empty
         if (!dfrom || !dto || !dfrom.value || !dto.value) {
             if (errEl) errEl.style.display = 'none';
             if (dto) dto.style.borderColor = '';
             return true;
         }
         if (dto.value < dfrom.value) {
-            // show an error and highlight the to date field in red
+            // highlight invalid to-date
             if (errEl) {
                 errEl.textContent = '"Date to" must be on or after "Published from"';
                 errEl.style.display = 'block';
@@ -435,21 +434,20 @@ $hasActiveFilters = $search_query || $category_id || $difficulty || $instructor_
             dto.style.borderColor = 'var(--c-danger)';
             return false;
         }
-        // dates are valid so clear any previous error
+        // clear previous error
         if (errEl) errEl.style.display = 'none';
         if (dto) dto.style.borderColor = '';
         return true;
     }
 
-    // revalidate the dates whenever either field changes
+    // revalidate on field change
     if (dfrom) dfrom.addEventListener('change', validateDates);
     if (dto)   dto.addEventListener('change', validateDates);
 
     if (form) {
         form.addEventListener('submit', function (e) {
-            // stop submission if the date range is invalid
             if (!validateDates()) { e.preventDefault(); return; }
-            // disable the button and show a spinner while the search is running
+            // spinner while searching
             if (subBtn) {
                 subBtn.disabled = true;
                 subBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Searching…';

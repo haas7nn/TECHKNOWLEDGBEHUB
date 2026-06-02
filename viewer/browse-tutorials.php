@@ -1,5 +1,5 @@
 <?php
-// browse tutorials page that lets students filter and search all published tutorials
+// browse and filter published tutorials
 
 require_once '../includes/viewer-auth-check.php';
 require_once '../classes/Tutorial.php';
@@ -8,7 +8,7 @@ require_once '../classes/Category.php';
 $page_title  = 'Browse Tutorials';
 $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
 
-// get filters from url
+// read filter params from url
 $search        = isset($_GET['search'])     ? clean($_GET['search'])     : '';
 $difficulty    = isset($_GET['difficulty']) ? clean($_GET['difficulty']) : '';
 $sort          = isset($_GET['sort'])       ? clean($_GET['sort'])       : 'newest';
@@ -17,10 +17,10 @@ $instructor_id = isset($_GET['instructor']) ? (int)$_GET['instructor']   : 0;
 $date_from     = isset($_GET['date_from'])  ? clean($_GET['date_from'])  : '';
 $date_to       = isset($_GET['date_to'])    ? clean($_GET['date_to'])    : '';
 
-// category needs to be an integer and 0 means show all categories
+// 0 means all categories
 $category = isset($_GET['category']) ? (int)$_GET['category'] : 0;
 
-// validate dates
+// validate date inputs
 $date_filter_error = '';
 if ($date_from !== '') {
     $p = DateTime::createFromFormat('Y-m-d', $date_from);
@@ -34,11 +34,11 @@ if ($date_from !== '' && $date_to !== '' && $date_from > $date_to) {
     $date_to = ''; $date_filter_error = '"To" date must be on or after "From" date — ignored.';
 }
 
-// get categories
+// load categories for dropdown
 $categoryObj = new Category();
 $categories  = $categoryObj->getAll();
 
-// load all active creators for the instructor dropdown
+// active creators for instructor filter
 $db   = new Database();
 $conn = $db->connect();
 $instructors = [];
@@ -51,7 +51,7 @@ if ($conn) {
     $instructors = $iStmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// build filters
+// build filter params for search
 $filters = ['sort' => $sort];
 if (!empty($search))        $filters['search']        = $search;
 if ($category > 0)          $filters['category_id']   = $category;
@@ -60,16 +60,16 @@ if ($instructor_id > 0)     $filters['instructor_id'] = $instructor_id;
 if (!empty($date_from))     $filters['date_from']     = $date_from;
 if (!empty($date_to))       $filters['date_to']       = $date_to;
 
-// run search
+// run paginated search
 $tutorialObj    = new Tutorial();
 $result         = $tutorialObj->search($filters, $page, 12);
 
-// unpack results
+// unpack search results
 $tutorials      = $result['tutorials']              ?? [];
 $pagination     = $result['pagination']             ?? [];
 $total_results  = $pagination['total_items']        ?? 0;
 
-// get favorites
+// fetch user favorite ids for heart state
 $user_favorites = [];
 if ($conn) {
     $favStmt = $conn->prepare(
@@ -100,7 +100,7 @@ if ($conn) {
 
         <main class="viewer-main">
 
-            <!-- page heading -->
+            <!-- page header -->
             <div class="browse-header">
                 <h1><i class="fas fa-th-large"></i> Browse Tutorials</h1>
                 <p>Discover thousands of tutorials to master new skills</p>
@@ -108,11 +108,11 @@ if ($conn) {
 
             <?php displayFlashMessage(); ?>
 
-            <!-- filter bar with search box, category, instructor, difficulty, date range and sort -->
+            <!-- filter bar -->
             <div class="browse-filters">
                 <form method="GET" action="" class="filters-form" id="browseFilterForm">
                     <div class="filter-row">
-                        <!-- text search box -->
+                        <!-- text search -->
                         <div class="search-box-large">
                             <i class="fas fa-search" aria-hidden="true"></i>
                             <input type="text" name="search"
@@ -120,7 +120,7 @@ if ($conn) {
                                    value="<?= e($search) ?>">
                         </div>
 
-                        <!-- category dropdown -->
+                        <!-- category filter -->
                         <div class="filter-group">
                             <select name="category" class="filter-select">
                                 <option value="0">All Categories</option>
@@ -133,7 +133,7 @@ if ($conn) {
                             </select>
                         </div>
 
-                        <!-- instructor/creator dropdown -->
+                        <!-- instructor filter -->
                         <div class="filter-group">
                             <select name="instructor" class="filter-select">
                                 <option value="0">All Instructors</option>
@@ -146,7 +146,7 @@ if ($conn) {
                             </select>
                         </div>
 
-                        <!-- difficulty dropdown -->
+                        <!-- difficulty filter -->
                         <div class="filter-group">
                             <select name="difficulty" class="filter-select">
                                 <option value="">All Levels</option>
@@ -158,7 +158,7 @@ if ($conn) {
                             </select>
                         </div>
 
-                        <!-- sort order dropdown -->
+                        <!-- sort order -->
                         <div class="filter-group">
                             <select name="sort" class="filter-select">
                                 <option value="newest"   <?= $sort==='newest'   ?'selected':'' ?>>Newest First</option>
@@ -174,7 +174,7 @@ if ($conn) {
                         </button>
                     </div>
 
-                    <!-- date range row -->
+                    <!-- date range filter -->
                     <div class="filter-row" style="margin-top:10px;align-items:center;flex-wrap:wrap;gap:10px;">
                         <label style="font-size:13px;font-weight:600;color:var(--c-text-3);">
                             <i class="fas fa-calendar-alt"></i> Published from:
@@ -197,7 +197,7 @@ if ($conn) {
                 </form>
             </div>
 
-            <!-- show how many results were found and a clear filters link if filters are active -->
+            <!-- result count and clear filters link -->
             <div class="results-info">
                 <?php if (!empty($search) || $category > 0 || !empty($difficulty)): ?>
                     <strong><?= number_format($total_results) ?></strong> tutorial<?= $total_results !== 1 ? 's' : '' ?> found
@@ -207,7 +207,7 @@ if ($conn) {
                 <?php endif; ?>
             </div>
 
-            <!-- show empty state or the grid of tutorial cards -->
+            <!-- tutorials grid or empty state -->
             <?php if (empty($tutorials)): ?>
                 <div class="empty-state">
                     <i class="fas fa-search"></i>
@@ -222,7 +222,7 @@ if ($conn) {
                     <?php foreach ($tutorials as $tutorial): ?>
                     <div class="tutorial-card">
 
-                        <!-- thumbnail image with difficulty badge and favorite button overlaid -->
+                        <!-- thumbnail with badge and favorite -->
                         <div class="card-thumbnail">
                             <?php if (!empty($tutorial['thumbnail'])): ?>
                                 <img src="<?= SITE_URL ?>/uploads/<?= e($tutorial['thumbnail']) ?>"
@@ -236,7 +236,7 @@ if ($conn) {
                                 <?= ucfirst($tutorial['difficulty']) ?>
                             </span>
 
-                            <!-- heart button is filled red if this tutorial is already favorited -->
+                            <!-- heart filled when already favorited -->
                             <?php $already_fav = in_array($tutorial['tutorial_id'], $user_favorites); ?>
                             <button class="favorite-btn <?= $already_fav ? 'active' : '' ?>"
                                     onclick="toggleFavorite(<?= $tutorial['tutorial_id'] ?>, this)"
@@ -246,7 +246,7 @@ if ($conn) {
                             </button>
                         </div>
 
-                        <!-- card body with category, title, description, instructor and stats -->
+                        <!-- card body -->
                         <div class="card-body">
                             <div class="category-tag">
                                 <i class="fas fa-folder" aria-hidden="true"></i>
@@ -261,7 +261,7 @@ if ($conn) {
                             </h3>
                             <p class="description"><?= e($tutorial['short_description']) ?></p>
 
-                            <!-- instructor name with avatar icon -->
+                            <!-- instructor with avatar -->
                             <div class="instructor">
                                 <?php if (!empty($tutorial['instructor_avatar'])): ?>
                                     <img src="<?= SITE_URL ?>/uploads/<?= e($tutorial['instructor_avatar']) ?>"
@@ -274,7 +274,7 @@ if ($conn) {
                                 <span><?= e($tutorial['instructor_name']) ?></span>
                             </div>
 
-                            <!-- stats row with rating views and duration -->
+                            <!-- rating views duration -->
                             <div class="card-meta">
                                 <span>
                                     <i class="fas fa-star" style="color:#d69e2e;"></i>
@@ -294,7 +294,7 @@ if ($conn) {
                             </div>
                         </div>
 
-                        <!-- card footer with the view tutorial button -->
+                        <!-- card footer -->
                         <div class="card-footer">
                             <a href="<?= SITE_URL ?>/viewer/tutorial-view.php?slug=<?= urlencode($tutorial['slug']) ?>"
                                class="btn btn-primary" style="flex:1;justify-content:center;">
@@ -305,10 +305,10 @@ if ($conn) {
                     <?php endforeach; ?>
                 </div>
 
-                <!-- pagination controls only shown when there is more than one page of results -->
+                <!-- pagination -->
                 <?php if (!empty($pagination['total_pages']) && $pagination['total_pages'] > 1): ?>
                 <?php
-                // build a base url that keeps all current filter values in the pagination links
+                // build pagination base url with active filters
                 $base_url = '?' . http_build_query(array_filter([
                     'search'     => $search,
                     'category'   => $category ?: '',
@@ -347,8 +347,7 @@ if ($conn) {
     </div>
 
     <script>
-    // toggle favorite
-    // ajax favorite
+    // ajax toggle favorite
     function toggleFavorite(tutorialId, btn) {
         fetch('<?= SITE_URL ?>/api/toggle-favorite.php', {
             method: 'POST',
@@ -362,7 +361,6 @@ if ($conn) {
         .then(data => {
             if (data.success) {
                 const icon = btn.querySelector('i');
-                // update icon
                 if (data.favorited) {
                     icon.className = 'fas fa-heart';
                     icon.style.color = '#e53e3e';
@@ -373,7 +371,7 @@ if ($conn) {
                     btn.title = 'Add to favorites';
                 }
             } else if (data.redirect) {
-                // user is not logged in so send them to the redirect url
+                // guest redirect to login
                 window.location.href = data.redirect;
             } else {
                 alert(data.message || 'Could not update favorite.');

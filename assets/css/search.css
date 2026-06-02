@@ -1,19 +1,11 @@
-/**
- * Search / Public Pages Stylesheet
- * Hasan Fardan - 202301686
- *
- * Covers: public nav bar, hero section, search filters, tutorial grid,
- *         pagination, and the home-page featured sections.
- * NOTE: shared.css is loaded BEFORE this file on every public page,
- *       so all var(--c-*) tokens are already defined.
- */
+/* search and public pages */
 
 /* ═══════════════════════════════════════════════════════════════════════
-   1. BASE RESET — only what shared.css doesn't already cover
+   1. BASE RESET
    ═══════════════════════════════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* Body inherits shared.css font (Inter). Only set background here. */
+/* background only — font from shared */
 body { background: #f4f7fe; font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; line-height: 1.6; }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -92,7 +84,7 @@ body { background: #f4f7fe; font-family: 'Inter', 'Segoe UI', system-ui, sans-se
     margin: 0 auto 28px;
 }
 
-/* Search form inside the hero */
+/* hero search bar */
 .hero-search {
     display: flex;
     max-width: 620px;
@@ -159,7 +151,7 @@ body { background: #f4f7fe; font-family: 'Inter', 'Segoe UI', system-ui, sans-se
     border: 1px solid #e8ecf1;
 }
 
-/* Each row inside the filter form */
+/* filter form rows */
 .filter-form { display: flex; flex-direction: column; gap: 14px; }
 
 .filter-row {
@@ -169,7 +161,7 @@ body { background: #f4f7fe; font-family: 'Inter', 'Segoe UI', system-ui, sans-se
     flex-wrap: wrap;
 }
 
-/* The main text search row stretches the input */
+/* main search row no-wrap */
 .filter-row:first-child { flex-wrap: nowrap; }
 
 .filter-row-selects .filter-group { flex: 1; min-width: 140px; }
@@ -250,7 +242,7 @@ body { background: #f4f7fe; font-family: 'Inter', 'Segoe UI', system-ui, sans-se
 .filter-select:focus { outline: none; border-color: #667eea; }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   6. BUTTONS (scoped to public pages; don't override shared.css globals)
+   6. BUTTONS
    ═══════════════════════════════════════════════════════════════════════ */
 .btn {
     padding: 11px 22px;
@@ -281,7 +273,7 @@ body { background: #f4f7fe; font-family: 'Inter', 'Segoe UI', system-ui, sans-se
     color: #667eea;
     border: 2px solid #667eea;
 }
-/* Soft hover (consistent with shared.css) — not filled solid */
+/* soft hover not filled */
 .btn-outline:hover { background: #eef0fd; color: #667eea; }
 .btn-sm { padding: 7px 14px; font-size: 13px; border-radius: 7px; }
 .btn-block { width: 100%; justify-content: center; }
@@ -296,7 +288,7 @@ body { background: #f4f7fe; font-family: 'Inter', 'Segoe UI', system-ui, sans-se
     margin-bottom: 36px;
 }
 
-/* Card — scoped under .tutorials-grid so it doesn't override viewer/creator cards */
+/* scoped card styles */
 .tutorials-grid .tutorial-card {
     background: #fff;
     border-radius: 14px;
@@ -325,7 +317,7 @@ body { background: #f4f7fe; font-family: 'Inter', 'Segoe UI', system-ui, sans-se
     object-fit: cover;
     display: block;
 }
-/* Placeholder when no thumbnail */
+/* no-thumbnail placeholder */
 .card-image-placeholder {
     width: 100%;
     height: 100%;
@@ -337,7 +329,7 @@ body { background: #f4f7fe; font-family: 'Inter', 'Segoe UI', system-ui, sans-se
     background: linear-gradient(135deg, #f0f2f8, #e8ecf1);
 }
 
-/* Difficulty badge — SCOPED to .card-image so it doesn't bleed globally */
+/* difficulty badge scoped to card image */
 .card-image .difficulty-badge {
     position: absolute;
     top: 10px;
@@ -366,7 +358,7 @@ body { background: #f4f7fe; font-family: 'Inter', 'Segoe UI', system-ui, sans-se
     flex-direction: column;
     gap: 6px;
 }
-/* Category tag — scoped to card-body */
+/* category tag scoped to card-body */
 .card-body .category-tag {
     display: inline-flex;
     align-items: center;
@@ -406,7 +398,7 @@ body { background: #f4f7fe; font-family: 'Inter', 'Segoe UI', system-ui, sans-se
 .card-meta span { display: flex; align-items: center; gap: 4px; }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   8. DIFFICULTY BADGE COLOURS (global — used both on cards and detail page)
+   8. DIFFICULTY BADGE COLOURS
    ═══════════════════════════════════════════════════════════════════════ */
 .difficulty-badge { display: inline-block; }
 .difficulty-beginner     { background: #d1fae5; color: #065f46; }
@@ -518,7 +510,7 @@ body { background: #f4f7fe; font-family: 'Inter', 'Segoe UI', system-ui, sans-se
 }
 @media (max-width: 680px) {
     .site-topbar { padding: 0 16px; }
-    .nav-links a span { display: none; }  /* show only icons on small screens */
+    .nav-links a span { display: none; }  /* icon only on small screens */
     .site-hero { padding: 52px 20px 44px; }
     .site-hero h1 { font-size: 26px; }
     .hero-search { flex-direction: column; border-radius: 12px; }

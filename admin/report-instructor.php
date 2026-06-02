@@ -8,34 +8,32 @@ $conn = $db->connect();
 // stop if db down
 if (!$conn) { setFlashMessage("Database error. Please try again.", "error"); redirect("auth/login.php"); }
 
-// get instructor id
 $instructor_id = (int)($_GET['instructor_id'] ?? 0);
 
-// load all creators and admins for the instructor dropdown
+// load creators and admins for dropdown
 $instructors = $conn->query(
     "SELECT user_id, full_name, email FROM dbProj_users
      WHERE role IN ('creator','admin') ORDER BY full_name"
 )->fetchAll();
 
-// these will be filled in once an instructor is selected
 $report = [];
 $instructor_info = null;
 
 if ($instructor_id) {
-    // find instructor
+    // look up selected instructor
     $instructor_info = $conn->prepare("SELECT * FROM dbProj_users WHERE user_id=:id");
     $instructor_info->bindParam(':id', $instructor_id, PDO::PARAM_INT);
     $instructor_info->execute();
     $instructor_info = $instructor_info->fetch();
 
-    // call stored procedure
+    // call stored procedure for instructor report
     try {
         $stmt = $conn->prepare("CALL GetInstructorReport(:instructor_id)");
         $stmt->bindParam(':instructor_id', $instructor_id, PDO::PARAM_INT);
         $stmt->execute();
         $report = $stmt->fetchAll();
     } catch (PDOException $e) {
-        // fallback query
+        // fallback if stored procedure unavailable
         $stmt = $conn->prepare(
             "SELECT t.tutorial_id, t.title, t.slug, t.status, t.view_count,
                     t.created_at, t.published_at, c.category_name,
@@ -56,10 +54,10 @@ if ($instructor_id) {
     }
 }
 
-// calculate summary numbers from the fetched report data
+// summary stats from report data
 $total_views   = array_sum(array_column($report, 'view_count'));
 $avg_rating_all = count($report) ? array_sum(array_column($report, 'avg_rating')) / count($report) : 0;
-// count how many of this instructor's tutorials are currently published
+// count published only
 $published_count = count(array_filter($report, fn($r) => ($r['status'] ?? '') === 'published'));
 ?>
 <!DOCTYPE html><html lang="en"><head>
@@ -71,7 +69,6 @@ $published_count = count(array_filter($report, fn($r) => ($r['status'] ?? '') ==
 <?php include '../includes/admin-nav.php'; ?>
 <div class="admin-wrap"><main class="admin-main">
 
-    <!-- page header -->
     <div class="page-header">
         <div>
             <h1><i class="fas fa-chalkboard-teacher"></i> Instructor Performance Report</h1>
@@ -80,14 +77,13 @@ $published_count = count(array_filter($report, fn($r) => ($r['status'] ?? '') ==
     </div>
     <?php displayFlashMessage(); ?>
 
-    <!-- card with a dropdown to pick which instructor to report on -->
     <div class="admin-card" style="margin-bottom:24px;">
         <div class="admin-card-header"><h2><i class="fas fa-filter"></i> Select Instructor</h2></div>
         <div class="admin-card-body">
             <form method="GET" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
                 <div style="flex:1;min-width:250px;">
                     <label style="display:block;font-size:13px;font-weight:600;margin-bottom:5px;">Instructor</label>
-                    <!-- dropdown lists every creator and admin account -->
+                    <!-- all creator and admin accounts -->
                     <select name="instructor_id" class="form-control">
                         <option value="">-- Select an Instructor --</option>
                         <?php foreach ($instructors as $ins): ?>
@@ -107,7 +103,7 @@ $published_count = count(array_filter($report, fn($r) => ($r['status'] ?? '') ==
 
     <?php if ($instructor_id && $instructor_info): ?>
 
-    <!-- summary stat cards for the selected instructor -->
+    <!-- stat summary for selected instructor -->
     <div class="stats-grid" style="margin-bottom:24px;">
         <div class="stat-card">
             <div class="stat-icon" style="background:linear-gradient(135deg,#667eea,#764ba2)"><i class="fas fa-book"></i></div>
@@ -128,13 +124,12 @@ $published_count = count(array_filter($report, fn($r) => ($r['status'] ?? '') ==
     </div>
 
     <?php if (empty($report)): ?>
-        <!-- shown when the instructor has not created any tutorials yet -->
         <div class="empty-state">
             <i class="fas fa-book-open"></i>
             <h3><?= e($instructor_info['full_name']) ?> has no tutorials yet</h3>
         </div>
     <?php else: ?>
-    <!-- detailed table of every tutorial by this instructor -->
+    <!-- per-tutorial breakdown -->
     <div class="admin-card">
         <div class="admin-card-header">
             <h2><i class="fas fa-user"></i> <?= e($instructor_info['full_name']) ?>'s Tutorials</h2>
@@ -145,12 +140,11 @@ $published_count = count(array_filter($report, fn($r) => ($r['status'] ?? '') ==
             <thead><tr><th>Title</th><th>Category</th><th>Status</th><th>Views</th><th>Rating</th><th>Comments</th><th>Published</th><th></th></tr></thead>
             <tbody>
             <?php foreach ($report as $t): ?>
-            <!-- one row per tutorial -->
             <tr>
                 <td><strong><?= e(truncate($t['title'], 45)) ?></strong></td>
                 <td><span class="badge badge-info"><?= e($t['category_name']) ?></span></td>
                 <td>
-                    <!-- badge colour based on tutorial status -->
+                    <!-- badge colour by status -->
                     <span class="badge badge-<?= ($t['status'] ?? '')==='published'?'success':(($t['status'] ?? '')==='draft'?'warning':'gray') ?>">
                         <?= ucfirst($t['status'] ?? '') ?>
                     </span>
@@ -162,12 +156,11 @@ $published_count = count(array_filter($report, fn($r) => ($r['status'] ?? '') ==
                     <small style="color:#a0aec0;">(<?= $t['rating_count'] ?>)</small>
                 </td>
                 <td><?= $t['comment_count'] ?></td>
-                <!-- show the publish date or a dash if it has not been published -->
+                <!-- N/A if not published yet -->
                 <td style="font-size:12px;color:#718096;">
                     <?= !empty($t['published_at']) ? formatDate($t['published_at']) : 'N/A' ?>
                 </td>
                 <td>
-                    <!-- link to view the tutorial on the live site -->
                     <a href="<?= SITE_URL ?>/viewer/tutorial-view.php?slug=<?= urlencode($t['slug']) ?>"
                        class="btn-icon" target="_blank" title="View">
                         <i class="fas fa-external-link-alt"></i>
@@ -181,7 +174,7 @@ $published_count = count(array_filter($report, fn($r) => ($r['status'] ?? '') ==
     </div>
     <?php endif; ?>
     <?php elseif ($instructor_id && !$instructor_info): ?>
-        <!-- shown if an instructor id was given but no matching user was found -->
+        <!-- id given but no matching user -->
         <div class="empty-state"><i class="fas fa-user-slash"></i><h3>Instructor not found</h3></div>
     <?php endif; ?>
 </main></div>

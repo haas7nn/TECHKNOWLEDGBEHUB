@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 360">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ea580c"/>
+      <stop offset="100%" stop-color="#ca8a04"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="360" fill="url(#g)"/>
+  <rect x="0" y="0" width="600" height="360" fill="rgba(0,0,0,0.12)"/>
+  <text x="300" y="148" font-family="'Segoe UI',Arial,sans-serif" font-size="68" font-weight="800" fill="rgba(255,255,255,0.18)" text-anchor="middle">AWS</text>
+  <text x="300" y="210" font-family="'Segoe UI',Arial,sans-serif" font-size="38" font-weight="800" fill="#fff" text-anchor="middle">AWS Cloud</text>
+  <text x="300" y="252" font-family="'Segoe UI',Arial,sans-serif" font-size="17" fill="rgba(255,255,255,0.78)" text-anchor="middle">EC2, S3, RDS Essentials</text>
+  <rect x="240" y="274" width="120" height="4" rx="2" fill="rgba(255,255,255,0.35)"/>
+</svg>

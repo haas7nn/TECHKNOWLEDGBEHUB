@@ -1,5 +1,5 @@
 <?php
-// creator dashboard that shows real stats pulled straight from the database
+// load creator dashboard stats
 
 require_once '../includes/auth-check.php';
 require_once '../classes/User.php';
@@ -7,15 +7,15 @@ require_once '../classes/Tutorial.php';
 
 $page_title = 'Creator Dashboard';
 
-// load the user object and get their overall stats
+// get user stats
 $user = new User();
 $user_stats = $user->getUserStats($current_user_id);
 
-// load all tutorials that belong to this instructor
+// fetch own tutorials only
 $tutorial = new Tutorial();
 $my_tutorials = $tutorial->getByInstructor($current_user_id);
 
-// calculate total views rating count and rating sum by looping through the tutorials
+// sum views and rating totals
 $total_tutorials = count($my_tutorials);
 $total_views = 0;
 $total_ratings_count = 0;
@@ -27,10 +27,10 @@ foreach ($my_tutorials as $tut) {
     $total_rating_sum += ($tut['avg_rating'] * $tut['rating_count']);
 }
 
-// work out the weighted average rating across all tutorials
+// weighted average across all tutorials
 $avg_rating = $total_ratings_count > 0 ? $total_rating_sum / $total_ratings_count : 0;
 
-// only show the five most recent tutorials in the recent table
+// trim to five most recent
 $recent_tutorials = array_slice($my_tutorials, 0, 5);
 ?>
 <!DOCTYPE html>
@@ -50,7 +50,7 @@ $recent_tutorials = array_slice($my_tutorials, 0, 5);
 
         <main class="dashboard-main">
 
-            <!-- welcome heading with the create tutorial shortcut button -->
+            <!-- welcome header and create shortcut -->
             <div class="dashboard-header">
                 <div>
                     <h1><i class="fas fa-home"></i> Welcome back, <?= e($current_user_name) ?></h1>
@@ -64,7 +64,7 @@ $recent_tutorials = array_slice($my_tutorials, 0, 5);
 
             <?php displayFlashMessage(); ?>
 
-            <!-- four stat cards showing tutorial count, views, average rating and total ratings -->
+            <!-- four summary stat cards -->
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon si-purple">
@@ -101,7 +101,7 @@ $recent_tutorials = array_slice($my_tutorials, 0, 5);
                     <div class="stat-details">
                         <h3><?= number_format($avg_rating, 1) ?></h3>
                         <p>Average Rating</p>
-                        <!-- small star display showing the rounded average -->
+                        <!-- star icons for rounded avg -->
                         <div class="star-rating-small">
                             <?php for($i = 1; $i <= 5; $i++): ?>
                                 <i class="fas fa-star <?= $i <= round($avg_rating) ? 'filled' : '' ?>"></i>
@@ -125,7 +125,7 @@ $recent_tutorials = array_slice($my_tutorials, 0, 5);
                 </div>
             </div>
 
-            <!-- quick action shortcut cards for common tasks -->
+            <!-- quick action cards -->
             <div class="quick-actions">
                 <h2>Quick Actions</h2>
                 <div class="action-cards">
@@ -155,7 +155,7 @@ $recent_tutorials = array_slice($my_tutorials, 0, 5);
                 </div>
             </div>
 
-            <!-- table showing the five most recently created tutorials -->
+            <!-- five most recent tutorials -->
             <div class="recent-section">
                 <div class="section-header">
                     <h2>Recent Tutorials</h2>
@@ -163,7 +163,7 @@ $recent_tutorials = array_slice($my_tutorials, 0, 5);
                 </div>
 
                 <?php if (empty($recent_tutorials)): ?>
-                    <!-- empty state for instructors who have not created anything yet -->
+                    <!-- no tutorials yet prompt -->
                     <div class="empty-state">
                         <i class="fas fa-book-open"></i>
                         <h3>No tutorials yet</h3>
@@ -174,7 +174,7 @@ $recent_tutorials = array_slice($my_tutorials, 0, 5);
                         </a>
                     </div>
                 <?php else: ?>
-                    <!-- table listing title, status, views, rating, date and edit/view actions -->
+                    <!-- tutorial list table -->
                     <div class="tutorials-table">
                         <table>
                             <thead>
@@ -226,12 +226,12 @@ $recent_tutorials = array_slice($my_tutorials, 0, 5);
                 <?php endif; ?>
             </div>
 
-            <!-- bar and line chart showing views and average rating per tutorial -->
+            <!-- views and rating chart -->
             <div class="chart-section">
                 <h2><i class="fas fa-chart-line"></i> Performance Overview</h2>
                 <div class="card-body">
                     <?php if (empty($my_tutorials)): ?>
-                        <!-- placeholder when there are no tutorials to chart yet -->
+                        <!-- no chart data yet -->
                         <div class="empty-state"><i class="fas fa-chart-area"></i><p>No tutorials yet. Create your first to see performance data.</p></div>
                     <?php else: ?>
                         <canvas id="perfChart" height="120"></canvas>
@@ -245,7 +245,7 @@ $recent_tutorials = array_slice($my_tutorials, 0, 5);
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
     (function() {
-        // build the label and data arrays from the php tutorial data
+        // build chart labels and data arrays
         const labels  = <?= json_encode(array_map(
             fn($t) => strlen($t['title']) > 22 ? substr($t['title'], 0, 22) . '…' : $t['title'],
             $my_tutorials
@@ -253,7 +253,7 @@ $recent_tutorials = array_slice($my_tutorials, 0, 5);
         const views   = <?= json_encode(array_column($my_tutorials, 'view_count')) ?>;
         const ratings = <?= json_encode(array_map(fn($t) => round((float)$t['avg_rating'], 2), $my_tutorials)) ?>;
 
-        // create a combined bar and line chart using two y axes
+        // bar and line chart with dual y axes
         new Chart(document.getElementById('perfChart'), {
             type: 'bar',
             data: {

@@ -8,58 +8,53 @@ $conn = $db->connect();
 // stop if db down
 if (!$conn) { setFlashMessage("Database error. Please try again.", "error"); redirect("auth/login.php"); }
 
-// handle moderation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrfFromPost()) {
-    // get action and comment
     $action     = clean($_POST['action']     ?? '');
     $comment_id = (int)($_POST['comment_id'] ?? 0);
 
     if ($comment_id) {
         if ($action === 'approve') {
-            // approve comment
             $conn->prepare("UPDATE dbProj_comments SET status='approved' WHERE comment_id=:id")
                  ->execute([':id' => $comment_id]);
             setFlashMessage('Comment approved and is now visible.', 'success');
         } elseif ($action === 'remove') {
-            // hide comment
+            // hide but keep in db
             $conn->prepare("UPDATE dbProj_comments SET status='removed' WHERE comment_id=:id")
                  ->execute([':id' => $comment_id]);
             setFlashMessage('Comment removed and hidden from users.', 'success');
         } elseif ($action === 'delete') {
-            // delete comment
+            // permanent delete
             $conn->prepare("DELETE FROM dbProj_comments WHERE comment_id=:id")
                  ->execute([':id' => $comment_id]);
             setFlashMessage('Comment permanently deleted.', 'success');
         }
     }
-    // keep tab state
+    // preserve tab after redirect
     $safe_status = isset($_GET['status']) ? urlencode(clean($_GET['status'])) : '';
     redirect('admin/comments.php' . ($safe_status ? '?status=' . $safe_status : ''));
 }
 
-// get filter and page
 $status_f = clean($_GET['status'] ?? 'all');
 $page     = max(1, (int)($_GET['page'] ?? 1));
 $per_page = 20;
 $offset   = ($page - 1) * $per_page;
 
-// filter by tab
 $where  = ['1=1'];
 $params = [];
 if ($status_f && $status_f !== 'all') {
-    // filter to filter by status
+    // filter by selected tab
     $where[] = "c.status=:status";
     $params[':status'] = $status_f;
 }
 
-// count for pagination
+// total rows for pagination
 $where_sql   = implode(' AND ', $where);
 $total       = $conn->prepare("SELECT COUNT(*) FROM dbProj_comments c WHERE $where_sql");
 $total->execute($params);
 $total       = $total->fetchColumn();
 $total_pages = max(1, ceil($total / $per_page));
 
-// get comments with details
+// fetch comments with user and tutorial info
 $sql = "SELECT c.*, u.full_name as user_name, u.email as user_email,
         t.title as tutorial_title, t.slug as tutorial_slug
         FROM dbProj_comments c
@@ -71,13 +66,13 @@ $sql = "SELECT c.*, u.full_name as user_name, u.email as user_email,
 
 $stmt = $conn->prepare($sql);
 foreach ($params as $k => $v) $stmt->bindValue($k, $v);
-// bind pagination values as integers so pdo does not quote them
+// bind pagination as integers to avoid quoting
 $stmt->bindValue(':lim', $per_page, PDO::PARAM_INT);
 $stmt->bindValue(':off', $offset,   PDO::PARAM_INT);
 $stmt->execute();
 $comments = $stmt->fetchAll();
 
-// count approved and removed comments for the tab badges using prepared statements
+// counts for tab badges
 $tab_counts = [];
 $count_stmt = $conn->prepare("SELECT COUNT(*) FROM dbProj_comments WHERE status = :s");
 foreach (['approved', 'removed'] as $s) {
@@ -94,20 +89,18 @@ foreach (['approved', 'removed'] as $s) {
 <?php include '../includes/admin-nav.php'; ?>
 <div class="admin-wrap"><main class="admin-main">
 
-    <!-- page header -->
     <div class="page-header">
         <div><h1><i class="fas fa-comments"></i> Comment Moderation</h1>
         <p>Review, approve, or remove user comments</p></div>
     </div>
     <?php displayFlashMessage(); ?>
 
-    <!-- status tab buttons to filter comments by their current state -->
+    <!-- filter tabs by status -->
     <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
         <?php foreach (['all'=>'gray','approved'=>'success','removed'=>'danger'] as $s => $badge): ?>
         <a href="?status=<?= $s ?>"
            class="btn btn-sm <?= $status_f===$s?'btn-primary':'btn-outline' ?>">
             <?= ucfirst($s) ?>
-            <!-- show the count badge next to the tab if the number is available -->
             <?php if (isset($tab_counts[$s])): ?>
                 <span style="background:rgba(255,255,255,.25);padding:1px 7px;border-radius:10px;font-size:11px;">
                     <?= $tab_counts[$s] ?>
@@ -118,21 +111,18 @@ foreach (['approved', 'removed'] as $s) {
     </div>
 
     <?php if (empty($comments)): ?>
-        <!-- empty state when there are no comments matching the current filter -->
         <div class="empty-state">
             <i class="fas fa-comment-slash"></i>
             <h3>No <?= $status_f ?> comments</h3>
             <p>Nothing to moderate right now.</p>
         </div>
     <?php else: ?>
-    <!-- comments table -->
     <div class="admin-card">
         <div class="admin-card-body" style="padding:0;">
         <table class="admin-table">
             <thead><tr><th>User</th><th>Comment</th><th>Tutorial</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
             <tbody>
             <?php foreach ($comments as $c): ?>
-            <!-- one row per comment showing user info the comment text and the tutorial it belongs to -->
             <tr>
                 <td>
                     <strong><?= e($c['user_name']) ?></strong><br>
@@ -144,7 +134,6 @@ foreach (['approved', 'removed'] as $s) {
                     </p>
                 </td>
                 <td>
-                    <!-- link to the tutorial this comment belongs to -->
                     <a href="<?= SITE_URL ?>/viewer/tutorial-view.php?slug=<?= urlencode($c['tutorial_slug']) ?>"
                        style="color:#667eea;font-size:13px;" target="_blank">
                         <?= e(truncate($c['tutorial_title'], 35)) ?>
@@ -152,16 +141,15 @@ foreach (['approved', 'removed'] as $s) {
                     </a>
                 </td>
                 <td>
-                    <!-- badge colour differs for approved vs removed -->
+                    <!-- badge colour by status -->
                     <span class="badge badge-<?= $c['status']==='approved'?'success':'danger' ?>">
                         <?= ucfirst($c['status']) ?>
                     </span>
                 </td>
                 <td style="font-size:12px;color:#718096;"><?= timeAgo($c['created_at']) ?></td>
                 <td>
-                    <!-- moderation action buttons -->
                     <div style="display:flex;gap:6px;">
-                        <!-- approve button only shown when the comment is not already approved -->
+                        <!-- approve only if not already approved -->
                         <?php if ($c['status'] !== 'approved'): ?>
                         <form method="POST" style="display:inline;">
                             <?php csrfField(); ?>
@@ -172,7 +160,7 @@ foreach (['approved', 'removed'] as $s) {
                             </button>
                         </form>
                         <?php endif; ?>
-                        <!-- remove button only shown when the comment is not already removed -->
+                        <!-- remove only if not already removed -->
                         <?php if ($c['status'] !== 'removed'): ?>
                         <form method="POST" style="display:inline;">
                             <?php csrfField(); ?>
@@ -183,7 +171,7 @@ foreach (['approved', 'removed'] as $s) {
                             </button>
                         </form>
                         <?php endif; ?>
-                        <!-- permanent delete button available for all comments -->
+                        <!-- always available permanent delete -->
                         <form method="POST" style="display:inline;"
                               onsubmit="return confirm('Permanently delete this comment?')">
                             <?php csrfField(); ?>
@@ -202,17 +190,14 @@ foreach (['approved', 'removed'] as $s) {
         </div>
     </div>
 
-    <!-- pagination controls -->
     <?php if ($total_pages > 1): ?>
     <div class="pagination">
-        <!-- previous page link -->
         <?php if ($page > 1): ?>
             <a href="?status=<?= $status_f ?>&page=<?= $page-1 ?>" class="btn btn-outline btn-sm">
                 <i class="fas fa-chevron-left"></i> Prev
             </a>
         <?php endif; ?>
         <span class="page-info">Page <?= $page ?> of <?= $total_pages ?></span>
-        <!-- next page link -->
         <?php if ($page < $total_pages): ?>
             <a href="?status=<?= $status_f ?>&page=<?= $page+1 ?>" class="btn btn-outline btn-sm">
                 Next <i class="fas fa-chevron-right"></i>

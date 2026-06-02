@@ -1,10 +1,6 @@
 <?php
-// top navigation bar for the viewer panel
-// the dropdown is toggled open and closed using the isopen css class
-
-// load categories for the browse by category dropdown
-// configphp and databasephp are already loaded by the page that includes this nav
-// but we guard with isset($conn) so the nav degrades gracefully if no connection exists
+// load categories for the category dropdown
+// guard with isset($conn) so nav still renders without a db connection
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/config.php';
 $navCategories = [];
@@ -15,7 +11,12 @@ if (isset($conn)) {
 ?>
 <nav class="viewer-navbar">
 
-    <!-- site logo and link back to the viewer dashboard -->
+    <!-- mobile hamburger toggle -->
+    <button class="sidebar-toggle-btn" id="viewerSidebarToggle" aria-label="Toggle navigation" type="button">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- site logo -->
     <div class="navbar-brand">
         <a href="<?= SITE_URL ?>/viewer/dashboard.php">
             <i class="fas fa-graduation-cap"></i>
@@ -23,7 +24,7 @@ if (isset($conn)) {
         </a>
     </div>
 
-    <!-- search bar that submits to the browse tutorials page -->
+    <!-- search bar -->
     <div class="navbar-search">
         <i class="fas fa-search"></i>
         <form action="<?= SITE_URL ?>/viewer/browse-tutorials.php" method="GET" role="search">
@@ -36,7 +37,7 @@ if (isset($conn)) {
         </form>
     </div>
 
-    <!-- main nav links and the user dropdown -->
+    <!-- main nav links -->
     <div class="navbar-menu">
         <a href="<?= SITE_URL ?>/viewer/browse-tutorials.php" class="nav-link">
             <i class="fas fa-th-large"></i><span>Browse</span>
@@ -45,7 +46,7 @@ if (isset($conn)) {
             <i class="fas fa-book-open"></i><span>My Learning</span>
         </a>
 
-        <!-- browse by category dropdown -->
+        <!-- category dropdown -->
         <?php if (!empty($navCategories)): ?>
         <div class="nav-dropdown">
             <button class="nav-link dropdown-toggle"
@@ -67,7 +68,7 @@ if (isset($conn)) {
         </div>
         <?php endif; ?>
 
-        <!-- user account dropdown -->
+        <!-- user dropdown -->
         <div class="nav-dropdown">
             <button class="nav-link dropdown-toggle"
                     onclick="toggleNavDropdown(event, 'viewerDropdownMenu')"
@@ -78,7 +79,7 @@ if (isset($conn)) {
                 <span><?= e($current_user_name ?? 'User') ?></span>
                 <i class="fas fa-chevron-down" aria-hidden="true" style="font-size:10px;opacity:.6;"></i>
             </button>
-            <!-- dropdown menu items -->
+            <!-- user dropdown items -->
             <div class="dropdown-menu" id="viewerDropdownMenu">
                 <a href="<?= SITE_URL ?>/viewer/dashboard.php"   class="dropdown-item"><i class="fas fa-home"></i> Dashboard</a>
                 <a href="<?= SITE_URL ?>/viewer/my-learning.php" class="dropdown-item"><i class="fas fa-graduation-cap"></i> My Learning</a>
@@ -90,20 +91,35 @@ if (isset($conn)) {
 </nav>
 
 <script>
-// toggle a dropdown menu open or closed without letting the click bubble to the document
-// close any other open dropdowns first so only one is open at a time
+// toggle dropdown open or closed one at a time
 function toggleNavDropdown(e, menuId) {
     e.stopPropagation();
     var menu = document.getElementById(menuId);
     if (!menu) return;
     var isNowOpen = menu.classList.contains('is-open');
-    // close all open nav dropdowns
     document.querySelectorAll('.dropdown-menu.is-open').forEach(function(m){ m.classList.remove('is-open'); });
-    // reopen the clicked one unless it was already open
+    // reopen if it was closed
     if (!isNowOpen) { menu.classList.add('is-open'); }
 }
-// close all open dropdown menus when the user clicks anywhere on the page
+// close dropdowns on outside click
 document.addEventListener('click', function () {
     document.querySelectorAll('.dropdown-menu.is-open').forEach(function(m){ m.classList.remove('is-open'); });
+});
+
+// toggle viewer sidebar on mobile
+var _sidebarBtn = document.getElementById('viewerSidebarToggle');
+if (_sidebarBtn) {
+    _sidebarBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var sb = document.querySelector('.viewer-sidebar');
+        if (sb) sb.classList.toggle('open');
+    });
+}
+// close sidebar on outside tap
+document.addEventListener('click', function (e) {
+    var sb = document.querySelector('.viewer-sidebar');
+    if (sb && sb.classList.contains('open') && !sb.contains(e.target)) {
+        sb.classList.remove('open');
+    }
 });
 </script>

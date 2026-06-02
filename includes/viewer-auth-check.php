@@ -1,28 +1,26 @@
 <?php
-// auth check for viewer and student pages
-// include this at the top of any page that only students or admins should see
+// guard for viewer and student pages
 
 require_once __DIR__ . '/../config/config.php';
 
-// if they are not logged in save where they were going and send them to login
+// redirect to login if not logged in
 if (!isLoggedIn()) {
     $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
     setFlashMessage('Please login to access this page', 'warning');
     redirect('auth/login.php');
 }
 
-// only viewers and admins are allowed here
-// if they are a creator send them to the creator dashboard instead
+// creators go to their own dashboard instead
 if (!isViewer() && !isAdmin()) {
     if (isCreator()) {
         redirect('creator/dashboard.php');
     }
-    // anyone else gets an access denied message and goes back to login
+    // block everyone else
     setFlashMessage('Access denied.', 'error');
     redirect('auth/login.php');
 }
 
-// set up the current user variables so every viewer page can use them easily
+// expose user vars to every viewer page
 $current_user_id    = getCurrentUserId();
 $current_user_name  = getCurrentUserName()  ?? 'Student';
 $current_user_email = getCurrentUserEmail() ?? '';

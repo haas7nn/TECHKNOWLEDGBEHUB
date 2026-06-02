@@ -1,26 +1,24 @@
 -- ============================================================================
--- TechKnowledge Hub
--- Course: IT8415 - Database Programming 2
--- Hasan Fardan - 202301686
--- ============================================================================
 
--- Drop database if exists -- be careful with this
+-- drop and recreate database
 DROP DATABASE IF EXISTS techknowledge_hub;
 
--- Create database with proper character set
+-- create database with utf8mb4
 CREATE DATABASE techknowledge_hub 
 CHARACTER SET utf8mb4 
 COLLATE utf8mb4_unicode_ci;
 
 USE techknowledge_hub;
 
+-- disable FK checks during import
+SET FOREIGN_KEY_CHECKS = 0;
+
 -- ============================================================================
 -- TABLE STRUCTURES
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- Table 1: dbProj_users
--- Stores user accounts with authentication and profile information
+-- Table 1: dbProj_users — user accounts and auth
 -- ----------------------------------------------------------------------------
 CREATE TABLE dbProj_users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -34,7 +32,7 @@ CREATE TABLE dbProj_users (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     last_login DATETIME NULL,
     
-    -- Indexes for performance
+    -- performance indexes
     INDEX idx_email (email),
     INDEX idx_role (role),
     INDEX idx_status (status),
@@ -42,8 +40,7 @@ CREATE TABLE dbProj_users (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------
--- Table 2: dbProj_categories
--- Stores tutorial categories (Web Dev, Database and everything else needed)
+-- Table 2: dbProj_categories — tutorial categories
 -- ----------------------------------------------------------------------------
 CREATE TABLE dbProj_categories (
     category_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -52,13 +49,11 @@ CREATE TABLE dbProj_categories (
     icon VARCHAR(255) NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     
-    -- Indexes
     INDEX idx_category_name (category_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------
--- Table 3: dbProj_tutorials
--- Main content table storing all tutorial information
+-- Table 3: dbProj_tutorials — main content table
 -- ----------------------------------------------------------------------------
 CREATE TABLE dbProj_tutorials (
     tutorial_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -78,16 +73,16 @@ CREATE TABLE dbProj_tutorials (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     published_at DATETIME NULL,
     
-    -- Foreign Keys
-    FOREIGN KEY (category_id) REFERENCES dbProj_categories(category_id) 
+    -- foreign keys
+    FOREIGN KEY (category_id) REFERENCES dbProj_categories(category_id)
         ON DELETE RESTRICT ON UPDATE CASCADE,
-    FOREIGN KEY (instructor_id) REFERENCES dbProj_users(user_id) 
+    FOREIGN KEY (instructor_id) REFERENCES dbProj_users(user_id)
         ON DELETE CASCADE ON UPDATE CASCADE,
-    
-    -- Full-text search index (all of it)
+
+    -- full-text search on title and content
     FULLTEXT INDEX ft_search (title, content),
-    
-    -- Performance indexes
+
+    -- performance indexes
     INDEX idx_slug (slug),
     INDEX idx_status (status),
     INDEX idx_category (category_id),
@@ -98,8 +93,7 @@ CREATE TABLE dbProj_tutorials (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------
--- Table 4: dbProj_tutorial_media
--- Stores uploaded files (images, videos, PDFs) for tutorials
+-- Table 4: dbProj_tutorial_media — uploaded files per tutorial
 -- ----------------------------------------------------------------------------
 CREATE TABLE dbProj_tutorial_media (
     media_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -110,18 +104,16 @@ CREATE TABLE dbProj_tutorial_media (
     file_size INT NULL COMMENT 'Size in KB',
     uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     
-    -- Foreign Key
-    FOREIGN KEY (tutorial_id) REFERENCES dbProj_tutorials(tutorial_id) 
+    -- foreign key
+    FOREIGN KEY (tutorial_id) REFERENCES dbProj_tutorials(tutorial_id)
         ON DELETE CASCADE ON UPDATE CASCADE,
-    
-    -- Indexes
+
     INDEX idx_tutorial (tutorial_id),
     INDEX idx_media_type (media_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------
--- Table 5: dbProj_ratings
--- Stores user ratings for tutorials (1-5 stars)
+-- Table 5: dbProj_ratings — 1-5 star ratings per user per tutorial
 -- ----------------------------------------------------------------------------
 CREATE TABLE dbProj_ratings (
     rating_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -130,24 +122,22 @@ CREATE TABLE dbProj_ratings (
     rating TINYINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
     rated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     
-    -- Foreign Keys
-    FOREIGN KEY (tutorial_id) REFERENCES dbProj_tutorials(tutorial_id) 
+    -- foreign keys
+    FOREIGN KEY (tutorial_id) REFERENCES dbProj_tutorials(tutorial_id)
         ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES dbProj_users(user_id) 
+    FOREIGN KEY (user_id) REFERENCES dbProj_users(user_id)
         ON DELETE CASCADE ON UPDATE CASCADE,
-    
-    -- Unique constraint: one rating per user per tutorial
+
+    -- one rating per user per tutorial
     UNIQUE KEY unique_user_tutorial_rating (tutorial_id, user_id),
-    
-    -- Indexes
+
     INDEX idx_tutorial (tutorial_id),
     INDEX idx_user (user_id),
     INDEX idx_rating (rating)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------
--- Table 6: dbProj_comments
--- Stores user comments with support for nested replies
+-- Table 6: dbProj_comments — comments with nested reply support
 -- ----------------------------------------------------------------------------
 CREATE TABLE dbProj_comments (
     comment_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -159,15 +149,14 @@ CREATE TABLE dbProj_comments (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
-    -- Foreign Keys
-    FOREIGN KEY (tutorial_id) REFERENCES dbProj_tutorials(tutorial_id) 
+    -- foreign keys
+    FOREIGN KEY (tutorial_id) REFERENCES dbProj_tutorials(tutorial_id)
         ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES dbProj_users(user_id) 
+    FOREIGN KEY (user_id) REFERENCES dbProj_users(user_id)
         ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (parent_comment_id) REFERENCES dbProj_comments(comment_id) 
+    FOREIGN KEY (parent_comment_id) REFERENCES dbProj_comments(comment_id)
         ON DELETE CASCADE ON UPDATE CASCADE,
-    
-    -- Indexes
+
     INDEX idx_tutorial (tutorial_id),
     INDEX idx_user (user_id),
     INDEX idx_parent (parent_comment_id),
@@ -176,44 +165,38 @@ CREATE TABLE dbProj_comments (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------
--- Table 7: dbProj_tags
--- Stores tags for categorizing tutorials (for example "php", "mysql", "beginner")
+-- Table 7: dbProj_tags — keyword tags for tutorials
 -- ----------------------------------------------------------------------------
 CREATE TABLE dbProj_tags (
     tag_id INT AUTO_INCREMENT PRIMARY KEY,
     tag_name VARCHAR(50) NOT NULL UNIQUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     
-    -- Indexes
     INDEX idx_tag_name (tag_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------
--- Table 8: dbProj_tutorial_tags
--- Junction table for many-to-many relationship between tutorials and tags
+-- Table 8: dbProj_tutorial_tags — many-to-many tutorials and tags
 -- ----------------------------------------------------------------------------
 CREATE TABLE dbProj_tutorial_tags (
     tutorial_id INT NOT NULL,
     tag_id INT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     
-    -- Composite Primary Key
     PRIMARY KEY (tutorial_id, tag_id),
-    
-    -- Foreign Keys
-    FOREIGN KEY (tutorial_id) REFERENCES dbProj_tutorials(tutorial_id) 
+
+    -- foreign keys
+    FOREIGN KEY (tutorial_id) REFERENCES dbProj_tutorials(tutorial_id)
         ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (tag_id) REFERENCES dbProj_tags(tag_id) 
+    FOREIGN KEY (tag_id) REFERENCES dbProj_tags(tag_id)
         ON DELETE CASCADE ON UPDATE CASCADE,
-    
-    -- Indexes (automatic on FK but explicit for clarity)
+
     INDEX idx_tutorial (tutorial_id),
     INDEX idx_tag (tag_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------
--- Table 9: dbProj_user_activity
--- Tracks user viewing and completion of tutorials
+-- Table 9: dbProj_user_activity — view and completion tracking
 -- ----------------------------------------------------------------------------
 CREATE TABLE dbProj_user_activity (
     activity_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -222,13 +205,12 @@ CREATE TABLE dbProj_user_activity (
     activity_type ENUM('view', 'complete') NOT NULL,
     activity_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     
-    -- Foreign Keys
-    FOREIGN KEY (user_id) REFERENCES dbProj_users(user_id) 
+    -- foreign keys
+    FOREIGN KEY (user_id) REFERENCES dbProj_users(user_id)
         ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (tutorial_id) REFERENCES dbProj_tutorials(tutorial_id) 
+    FOREIGN KEY (tutorial_id) REFERENCES dbProj_tutorials(tutorial_id)
         ON DELETE CASCADE ON UPDATE CASCADE,
-    
-    -- Indexes
+
     INDEX idx_user (user_id),
     INDEX idx_tutorial (tutorial_id),
     INDEX idx_activity_type (activity_type),
@@ -240,8 +222,7 @@ CREATE TABLE dbProj_user_activity (
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- Trigger 1: UpdateViewCount
--- Automatically updates tutorial view_count when user views it
+-- Trigger 1: UpdateViewCount — increments view_count on new view activity
 -- ----------------------------------------------------------------------------
 DELIMITER //
 
@@ -259,8 +240,7 @@ END //
 DELIMITER ;
 
 -- ----------------------------------------------------------------------------
--- Trigger 2: SetPublishedDate
--- Automatically set published_at timestamp when tutorial status changes to published
+-- Trigger 2: SetPublishedDate — stamps published_at when status goes to published
 -- ----------------------------------------------------------------------------
 DELIMITER //
 
@@ -281,11 +261,8 @@ DELIMITER ;
 
 -- ----------------------------------------------------------------------------
 -- Procedure 1: GetPopularTutorials
--- Returns most popular tutorials within a date range
--- Parameters:
---   startDate: Beginning of date range
---   endDate: End of date range
---   limitCount: Maximum number of results
+-- top tutorials by views within a date range
+-- params: startDate endDate limitCount
 -- ----------------------------------------------------------------------------
 DELIMITER //
 
@@ -328,18 +305,15 @@ DELIMITER ;
 
 -- ----------------------------------------------------------------------------
 -- Procedure 2: GetInstructorReport
--- Returns comprehensive performance report for an instructor
--- Parameters:
---   instructorId: ID of the instructor
--- Returns: Two result sets
---   1. Summary statistics
---   2. Individual tutorial performance
+-- instructor performance report — two result sets
+-- params: instructorId
+-- result 1: summary stats  result 2: per-tutorial breakdown
 -- ----------------------------------------------------------------------------
 DELIMITER //
 
 CREATE PROCEDURE GetInstructorReport(IN instructorId INT)
 BEGIN
-    -- Result Set 1: Summary Statistics
+    -- result set 1: summary stats
     SELECT 
         u.user_id,
         u.full_name,
@@ -360,7 +334,7 @@ BEGIN
     WHERE u.user_id = instructorId
     GROUP BY u.user_id;
     
-    -- Result Set 2: Individual Tutorial Performance
+    -- result set 2: per-tutorial breakdown
     SELECT 
         t.tutorial_id,
         t.title,
@@ -389,7 +363,7 @@ DELIMITER ;
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- Insert Categories (6 categories)
+-- sample categories
 -- ----------------------------------------------------------------------------
 INSERT INTO dbProj_categories (category_name, description, icon) VALUES
 ('Web Development', 'Learn HTML, CSS, JavaScript and modern web frameworks', 'fa-code'),
@@ -400,20 +374,18 @@ INSERT INTO dbProj_categories (category_name, description, icon) VALUES
 ('Cloud Computing', 'AWS, Azure, Google Cloud platforms and DevOps', 'fa-cloud');
 
 -- ----------------------------------------------------------------------------
--- Insert Users (6 users)
--- All passwords are: Password123!
--- Hashed using bcrypt: $2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi
+-- sample users — all passwords are Password123!
 -- ----------------------------------------------------------------------------
 INSERT INTO dbProj_users (full_name, email, password_hash, role, bio, status) VALUES
-('John Admin', 'admin@techknow.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'System Administrator with 10+ years experience in education technology', 'active'),
-('Sarah Johnson', 'sarah.j@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'creator', 'Full Stack Developer & Instructor specializing in web technologies. Passionate about making programming accessible to everyone.', 'active'),
-('Mike Chen', 'mike.chen@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'creator', 'Database Expert and SQL Specialist with industry certifications. Former DBA at Fortune 500 companies.', 'active'),
-('Emily Davis', 'emily.d@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'creator', 'Python Developer & AI Enthusiast. Teaching machine learning and data science to beginners.', 'active'),
-('David Wilson', 'david.w@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'viewer', 'Computer Science student learning web development and databases', 'active'),
-('Lisa Brown', 'lisa.b@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'viewer', 'Aspiring software engineer interested in full-stack development', 'active');
+('John Admin', 'admin@techknow.com', '$2y$10$10DmykZTRiIcejhAqQhFUuv4K2l1WJCE.EuWOjim6puHWh2pEOtdy', 'admin', 'System Administrator with 10+ years experience in education technology', 'active'),
+('Sarah Johnson', 'sarah.j@email.com', '$2y$10$10DmykZTRiIcejhAqQhFUuv4K2l1WJCE.EuWOjim6puHWh2pEOtdy', 'creator', 'Full Stack Developer & Instructor specializing in web technologies. Passionate about making programming accessible to everyone.', 'active'),
+('Mike Chen', 'mike.chen@email.com', '$2y$10$10DmykZTRiIcejhAqQhFUuv4K2l1WJCE.EuWOjim6puHWh2pEOtdy', 'creator', 'Database Expert and SQL Specialist with industry certifications. Former DBA at Fortune 500 companies.', 'active'),
+('Emily Davis', 'emily.d@email.com', '$2y$10$10DmykZTRiIcejhAqQhFUuv4K2l1WJCE.EuWOjim6puHWh2pEOtdy', 'creator', 'Python Developer & AI Enthusiast. Teaching machine learning and data science to beginners.', 'active'),
+('David Wilson', 'david.w@email.com', '$2y$10$10DmykZTRiIcejhAqQhFUuv4K2l1WJCE.EuWOjim6puHWh2pEOtdy', 'viewer', 'Computer Science student learning web development and databases', 'active'),
+('Lisa Brown', 'lisa.b@email.com', '$2y$10$10DmykZTRiIcejhAqQhFUuv4K2l1WJCE.EuWOjim6puHWh2pEOtdy', 'viewer', 'Aspiring software engineer interested in full-stack development', 'active');
 
 -- ----------------------------------------------------------------------------
--- Insert Tutorials (15 tutorials)
+-- sample tutorials
 -- ----------------------------------------------------------------------------
 INSERT INTO dbProj_tutorials (title, slug, short_description, content, thumbnail, video_url, category_id, instructor_id, difficulty, duration_minutes, status, view_count, published_at) VALUES
 -- Tutorial 1
@@ -492,7 +464,7 @@ INSERT INTO dbProj_tutorials (title, slug, short_description, content, thumbnail
 'vuejs-thumb.jpg', 'https://example.com/videos/vuejs-3.mp4', 1, 2, 'intermediate', 195, 'published', 1823, '2024-04-25 15:00:00');
 
 -- ----------------------------------------------------------------------------
--- Insert Tags (25 tags)
+-- sample tags
 -- ----------------------------------------------------------------------------
 INSERT INTO dbProj_tags (tag_name) VALUES
 ('php'), ('mysql'), ('javascript'), ('es6'), ('database'), 
@@ -502,7 +474,7 @@ INSERT INTO dbProj_tags (tag_name) VALUES
 ('docker'), ('mongodb'), ('nosql'), ('vuejs'), ('backend'), ('frontend');
 
 -- ----------------------------------------------------------------------------
--- Insert Tutorial Tags (associating tutorials with relevant tags)
+-- tutorial-tag associations
 -- ----------------------------------------------------------------------------
 INSERT INTO dbProj_tutorial_tags (tutorial_id, tag_id) VALUES
 -- Tutorial 1: PHP & MySQL
@@ -537,7 +509,7 @@ INSERT INTO dbProj_tutorial_tags (tutorial_id, tag_id) VALUES
 (15, 23), (15, 25);
 
 -- ----------------------------------------------------------------------------
--- Insert Ratings (realistic distribution across tutorials)
+-- sample ratings
 -- ----------------------------------------------------------------------------
 INSERT INTO dbProj_ratings (tutorial_id, user_id, rating) VALUES
 -- Tutorial 1
@@ -572,7 +544,7 @@ INSERT INTO dbProj_ratings (tutorial_id, user_id, rating) VALUES
 (15, 5, 3), (15, 6, 4);
 
 -- ----------------------------------------------------------------------------
--- Insert Comments (engaging, realistic comments)
+-- sample comments
 -- ----------------------------------------------------------------------------
 INSERT INTO dbProj_comments (tutorial_id, user_id, parent_comment_id, comment_text, status) VALUES
 -- Tutorial 1
@@ -600,7 +572,7 @@ INSERT INTO dbProj_comments (tutorial_id, user_id, parent_comment_id, comment_te
 (12, 6, NULL, 'Node.js + Express combination is powerful. Great tutorial! Ready to build my own API now.', 'approved');
 
 -- ----------------------------------------------------------------------------
--- Insert User Activity (tracking views and completions)
+-- sample user activity
 -- ----------------------------------------------------------------------------
 INSERT INTO dbProj_user_activity (user_id, tutorial_id, activity_type) VALUES
 -- David's activity
@@ -615,7 +587,7 @@ INSERT INTO dbProj_user_activity (user_id, tutorial_id, activity_type) VALUES
 (6, 11, 'view');
 
 -- ----------------------------------------------------------------------------
--- Insert Tutorial Media (sample media files)
+-- sample media files
 -- ----------------------------------------------------------------------------
 INSERT INTO dbProj_tutorial_media (tutorial_id, media_type, file_name, file_path, file_size) VALUES
 (1, 'image', 'php-syntax-example.png', 'uploads/tutorials/1/php-syntax-example.png', 245),
@@ -630,10 +602,10 @@ INSERT INTO dbProj_tutorial_media (tutorial_id, media_type, file_name, file_path
 (9, 'document', 'api-documentation-template.pdf', 'uploads/tutorials/9/api-documentation-template.pdf', 654);
 
 -- ============================================================================
--- VERIFICATION QUERIES (Run these to verify everything is working)
+-- VERIFICATION QUERIES
 -- ============================================================================
 
--- Check table counts
+-- row counts per table
 SELECT 
     'users' AS table_name, COUNT(*) AS row_count FROM dbProj_users
 UNION ALL
@@ -653,13 +625,13 @@ SELECT 'tutorial_tags', COUNT(*) FROM dbProj_tutorial_tags
 UNION ALL
 SELECT 'user_activity', COUNT(*) FROM dbProj_user_activity;
 
--- Test stored procedure 1
+-- test GetPopularTutorials
 CALL GetPopularTutorials('2024-01-01', '2024-12-31', 5);
 
--- Test stored procedure 2
+-- test GetInstructorReport
 CALL GetInstructorReport(2);
 
--- Test full-text search
+-- test full-text search
 SELECT tutorial_id, title, MATCH(title, content) AGAINST('javascript') AS relevance
 FROM dbProj_tutorials
 WHERE MATCH(title, content) AGAINST('javascript')
@@ -667,57 +639,80 @@ ORDER BY relevance DESC
 LIMIT 5;
 
 -- ============================================================================
--- FIX: Replace placeholder thumbnails with the shared SVG placeholder image
---      so tutorial cards always render an actual image (rubric req 1.2).
+-- FIX: per-topic thumbnail SVGs — files must exist in uploads/
 -- ============================================================================
-UPDATE dbProj_tutorials SET thumbnail = 'placeholder.svg';
+UPDATE dbProj_tutorials SET thumbnail = 'thumb-php-mysql.svg'       WHERE slug = 'php-mysql-beginners';
+UPDATE dbProj_tutorials SET thumbnail = 'thumb-javascript.svg'      WHERE slug = 'javascript-es6-advanced';
+UPDATE dbProj_tutorials SET thumbnail = 'thumb-database.svg'        WHERE slug = 'database-design-fundamentals';
+UPDATE dbProj_tutorials SET thumbnail = 'thumb-sql-opt.svg'         WHERE slug = 'sql-optimization';
+UPDATE dbProj_tutorials SET thumbnail = 'thumb-python.svg'          WHERE slug = 'python-data-science';
+UPDATE dbProj_tutorials SET thumbnail = 'thumb-ml.svg'              WHERE slug = 'machine-learning-python';
+UPDATE dbProj_tutorials SET thumbnail = 'thumb-react-native.svg'    WHERE slug = 'react-native-mobile';
+UPDATE dbProj_tutorials SET thumbnail = 'thumb-aws.svg'             WHERE slug = 'aws-cloud-essentials';
+UPDATE dbProj_tutorials SET thumbnail = 'thumb-rest-api.svg'        WHERE slug = 'restful-api-design';
+UPDATE dbProj_tutorials SET thumbnail = 'thumb-git.svg'             WHERE slug = 'git-github-beginners';
+UPDATE dbProj_tutorials SET thumbnail = 'thumb-css-grid.svg'        WHERE slug = 'css-grid-responsive';
+UPDATE dbProj_tutorials SET thumbnail = 'thumb-nodejs.svg'          WHERE slug = 'nodejs-backend-dev';
+UPDATE dbProj_tutorials SET thumbnail = 'thumb-docker.svg'          WHERE slug = 'docker-containerization';
+UPDATE dbProj_tutorials SET thumbnail = 'thumb-mongodb.svg'         WHERE slug = 'intro-mongodb';
+UPDATE dbProj_tutorials SET thumbnail = 'thumb-vuejs.svg'           WHERE slug = 'vuejs-3-guide';
 
 -- ============================================================================
--- FIX: Replace fake example.com video URLs with real YouTube embed URLs
---      so the video media section is demonstrable (rubric req 1.2 media file).
+-- FIX: real YouTube embed URLs — slug match fixes earlier bug
 -- ============================================================================
 UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/2pWv7GOvuf0'
-    WHERE slug = 'php-mysql-complete-guide-for-beginners';
+    WHERE slug = 'php-mysql-beginners';
 UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/PkZNo7MFNFg'
-    WHERE slug = 'mastering-javascript-es6-and-beyond';
+    WHERE slug = 'javascript-es6-advanced';
 UPDATE dbProj_tutorials SET video_url = NULL
     WHERE slug = 'database-design-fundamentals';
 UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/HXV3zeQKqGY'
-    WHERE slug = 'sql-query-optimization-advanced-techniques';
+    WHERE slug = 'sql-optimization';
 UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/rfscVS0vtbw'
-    WHERE slug = 'python-for-data-science-complete-course';
+    WHERE slug = 'python-data-science';
 UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/tPYj3fFJGjk'
-    WHERE slug = 'machine-learning-with-python-from-scratch';
+    WHERE slug = 'machine-learning-python';
 UPDATE dbProj_tutorials SET video_url = NULL
-    WHERE slug = 'react-native-mobile-app-development';
+    WHERE slug = 'react-native-mobile';
 UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/3hLmDS179YE'
-    WHERE slug = 'aws-cloud-essentials-for-beginners';
+    WHERE slug = 'aws-cloud-essentials';
 UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/SLwpqD8n3d0'
-    WHERE slug = 'building-restful-apis-with-php';
+    WHERE slug = 'restful-api-design';
 UPDATE dbProj_tutorials SET video_url = NULL
-    WHERE slug = 'git-and-github-complete-workflow-guide';
+    WHERE slug = 'git-github-beginners';
 UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/1Rs2ND1ryYc'
-    WHERE slug = 'css-grid-and-flexbox-masterclass';
+    WHERE slug = 'css-grid-responsive';
 UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/Oe421EPjeBE'
-    WHERE slug = 'nodejs-backend-development-with-express';
+    WHERE slug = 'nodejs-backend-dev';
 UPDATE dbProj_tutorials SET video_url = NULL
-    WHERE slug = 'docker-containerization-complete-guide';
+    WHERE slug = 'docker-containerization';
 UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/c2M-rlkkT5o'
-    WHERE slug = 'mongodb-nosql-database-for-beginners';
+    WHERE slug = 'intro-mongodb';
 UPDATE dbProj_tutorials SET video_url = 'https://www.youtube.com/embed/4deVCNJq3qc'
-    WHERE slug = 'vuejs-3-complete-crash-course';
+    WHERE slug = 'vuejs-3-guide';
+
+-- ============================================================================
+-- FIX: update media paths to .svg so browser can serve them
+-- ============================================================================
+UPDATE dbProj_tutorial_media SET file_name='php-syntax-example.svg',    file_path='tutorials/1/php-syntax-example.svg'    WHERE file_name='php-syntax-example.png';
+UPDATE dbProj_tutorial_media SET file_name='es6-features-diagram.svg',  file_path='tutorials/2/es6-features-diagram.svg'  WHERE file_name='es6-features-diagram.png';
+UPDATE dbProj_tutorial_media SET file_name='erd-example-ecommerce.svg', file_path='tutorials/3/erd-example-ecommerce.svg' WHERE file_name='erd-example-ecommerce.png';
+UPDATE dbProj_tutorial_media SET file_name='pandas-dataframe-ops.svg',  file_path='tutorials/5/pandas-dataframe-ops.svg'  WHERE file_name='pandas-dataframe-operations.png';
+UPDATE dbProj_tutorial_media SET file_name='neural-network-arch.svg',   file_path='tutorials/6/neural-network-arch.svg'   WHERE file_name='neural-network-architecture.png';
+UPDATE dbProj_tutorial_media SET file_name='react-native-comps.svg',    file_path='tutorials/7/react-native-comps.svg'    WHERE file_name='react-native-components.png';
+UPDATE dbProj_tutorial_media SET file_name='aws-architecture.svg',      file_path='tutorials/8/aws-architecture.svg'      WHERE file_name='aws-architecture-diagram.png';
 
 -- ============================================================================
 -- SETUP COMPLETE
 -- ============================================================================
 
--- Display success message
+-- success message
 SELECT 
     '✅ DATABASE SETUP COMPLETE!' AS Status,
     'All tables, triggers, procedures, and sample data loaded successfully.' AS Message,
     'You can now start building your application!' AS NextStep;
 
--- Display test account information
+-- test account list
 SELECT 
     'TEST ACCOUNTS' AS Information,
     'All passwords are: Password123!' AS Password;
@@ -730,7 +725,10 @@ SELECT
 FROM dbProj_users
 ORDER BY 
     CASE role 
-        WHEN 'admin' THEN 1 
-        WHEN 'creator' THEN 2 
-        WHEN 'viewer' THEN 3 
+        WHEN 'admin' THEN 1
+        WHEN 'creator' THEN 2
+        WHEN 'viewer' THEN 3
     END;
+
+-- re-enable FK checks
+SET FOREIGN_KEY_CHECKS = 1;

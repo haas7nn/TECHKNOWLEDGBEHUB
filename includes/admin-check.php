@@ -1,22 +1,22 @@
 <?php
-// load the app config and all helper functions
+// load config and helpers
 require_once __DIR__ . '/../config/config.php';
-// if the user is not logged in save where they were trying to go then redirect to login
+// redirect to login if not logged in
 if (!isLoggedIn()) {
     $uri = $_SERVER['REQUEST_URI'];
-    // only store relative paths never external urls
+    // only save relative paths
     if (preg_match('#^/#', $uri) && !preg_match('#^//|https?://#i', $uri)) {
         $_SESSION['redirect_after_login'] = $uri;
     }
     setFlashMessage('Please login as administrator.', 'warning');
     redirect('auth/login.php');
 }
-// if the user is logged in but is not an admin block them from accessing this page
+// block non-admins
 if (!isAdmin()) {
     setFlashMessage('Access denied. Admins only.', 'error');
     redirect('auth/login.php');
 }
-// store the current admin user details so every admin page can use them
+// expose user vars to every admin page
 $current_user_id   = getCurrentUserId();
 $current_user_name = getCurrentUserName() ?? 'Admin';
 ?>

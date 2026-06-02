@@ -1,28 +1,4 @@
-/**
- * shared.css  TechKnowledge Hub Design System
- * The single source of truth for all design tokens and shared UI components
- * Imported at the top of viewer.css, creator.css, admin.css, and auth.css
- *
- * Table of Contents:
- *   1. Google Fonts
- *   2. Design Tokens (:root)
- *   3. Reset & Base
- *   4. Typography
- *   5. Shared Navbar
- *   6. Buttons
- *   7. Badges
- *   8. Flash Messages & Alerts
- *   9. Forms
- *  10. Cards
- *  11. Stat Cards
- *  12. Data Tables
- *  13. Empty State
- *  14. Pagination
- *  15. Page Header
- *  16. Difficulty Badges
- *  17. Progress
- *  18. Filter Bar
- */
+/* shared design tokens and UI components */
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -94,9 +70,7 @@
     --t-fast: 150ms ease;
     --t-base: 200ms ease;
 
-    /* Aliases viewer.css and creator.css were written with --clr and --radius and --navbar-h names
-       These lines bridge them to the canonical --c and --r and --nav-h tokens above so both
-       naming schemes resolve without touching the generated panel stylesheets */
+    /* legacy name aliases bridged to canonical tokens */
 
     /* Color aliases */
     --clr-primary:       var(--c-primary);
@@ -131,8 +105,7 @@
     --radius-xl:   var(--r-xl);
     --radius-pill: var(--r-pill);
 
-    /* Layout aliases panels use --navbar-h and --sidebar-width with larger fallbacks
-       pin them here so the fallback is never used */
+    /* layout aliases so fallback values are never used */
     --navbar-h:      var(--nav-h);
     --sidebar-width: var(--sidebar-w);
 }
@@ -170,7 +143,7 @@ img {
     max-width: 100%;
 }
 
-/* Screen-reader-only utility visually hidden but accessible to assistive tech */
+/* visually hidden but screen-reader accessible */
 .sr-only {
     position: absolute;
     width: 1px;
@@ -197,7 +170,7 @@ h6 { font-size: 13px; font-weight: 600; line-height: 1.5; }
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   5. SHARED NAVBAR  (.viewer-navbar used by viewer, creator, and admin)
+   5. SHARED NAVBAR
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .viewer-navbar {
@@ -232,7 +205,7 @@ h6 { font-size: 13px; font-weight: 600; line-height: 1.5; }
 
 .navbar-brand a:hover { background: var(--c-primary-bg); }
 
-/* The icon sits inside a gradient pill this technique works with FA icons */
+/* gradient pill wraps FA icon */
 .navbar-brand i {
     width: 34px;
     height: 34px;
@@ -241,7 +214,7 @@ h6 { font-size: 13px; font-weight: 600; line-height: 1.5; }
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: #fff;                    /* always white, no background-clip trick */
+    color: #fff;                    /* always white */
     font-size: 16px;
     flex-shrink: 0;
     box-shadow: 0 3px 10px rgba(102,126,234,.40);
@@ -338,7 +311,7 @@ h6 { font-size: 13px; font-weight: 600; line-height: 1.5; }
     text-decoration: none;
     transition: background var(--t-fast), color var(--t-fast);
     line-height: 1.4;
-    /* Ensure no old width/height overrides ever win */
+    /* prevent old overrides */
     width: auto;
     height: auto;
 }
@@ -600,7 +573,7 @@ h6 { font-size: 13px; font-weight: 600; line-height: 1.5; }
     border-left-color: var(--c-info);
 }
 
-/* Alert aliases (same visual, alternate class names) */
+/* alert aliases same as flash */
 
 .alert {
     display: flex;
@@ -1037,7 +1010,7 @@ h6 { font-size: 13px; font-weight: 600; line-height: 1.5; }
    19. SIDEBAR NAV  (shared styles for .nav-item used in viewer & creator)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Active item coloured left-border accent same treatment as admin sidebar */
+/* active item left border accent */
 .sidebar-nav .nav-item.active,
 .viewer-sidebar  a.nav-item.active,
 .creator-sidebar a.nav-item.active {
@@ -1045,7 +1018,7 @@ h6 { font-size: 13px; font-weight: 600; line-height: 1.5; }
     color: var(--c-primary);
     font-weight: 600;
     border-left: 3px solid var(--c-primary);
-    padding-left: 11px;   /* compensate so text doesn't shift right */
+    padding-left: 11px;   /* offset border so text stays aligned */
 }
 
 /* Sidebar footer / help widget */
@@ -1082,7 +1055,7 @@ h6 { font-size: 13px; font-weight: 600; line-height: 1.5; }
    20. ENHANCED VISUAL POLISH
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Stat-card left accent colour strip */
+/* stat card left accent strip */
 .stat-card { position: relative; overflow: hidden; }
 .stat-card::before {
     content: '';
@@ -1115,7 +1088,7 @@ h6 { font-size: 13px; font-weight: 600; line-height: 1.5; }
     color: var(--c-text-3);
 }
 
-/* Section titles (h2 inside cards / main content) */
+/* section title inside cards */
 .section-title {
     font-size: 16px;
     font-weight: 700;
@@ -1127,7 +1100,7 @@ h6 { font-size: 13px; font-weight: 600; line-height: 1.5; }
 }
 .section-title i { color: var(--c-primary); font-size: 15px; }
 
-/* Tutorial card polish (shared between viewer browse and creator) */
+/* shared tutorial card style */
 .tutorial-card {
     background: var(--c-surface);
     border-radius: var(--r-xl);
@@ -1145,7 +1118,7 @@ h6 { font-size: 13px; font-weight: 600; line-height: 1.5; }
     border-color: rgba(102,126,234,.25);
 }
 
-/* Category tag inside cards */
+/* category tag label */
 .category-tag {
     font-size: 11px;
     font-weight: 700;
@@ -1157,13 +1130,13 @@ h6 { font-size: 13px; font-weight: 600; line-height: 1.5; }
     gap: 4px;
 }
 
-/* Page-level container (viewer + creator main area) */
+/* main page background */
 .viewer-main,
 .dashboard-main {
     background: var(--c-page);
 }
 
-/* Admin card hover lift */
+/* admin card hover lift */
 .admin-card {
     transition: box-shadow var(--t-base);
 }
@@ -1171,7 +1144,7 @@ h6 { font-size: 13px; font-weight: 600; line-height: 1.5; }
     box-shadow: var(--shadow-md);
 }
 
-/* Form section polish (creator pages) */
+/* creator form section card */
 .form-section {
     background: var(--c-surface);
     border: 1px solid var(--c-border);
@@ -1195,7 +1168,7 @@ h6 { font-size: 13px; font-weight: 600; line-height: 1.5; }
 
 .form-section h2 i { color: var(--c-primary); }
 
-/* Responsive layout helpers */
+/* responsive breakpoints */
 @media (max-width: 1024px) {
     .viewer-main, .dashboard-main { padding: 22px 24px; }
 }
@@ -1215,7 +1188,7 @@ h6 { font-size: 13px; font-weight: 600; line-height: 1.5; }
     .viewer-navbar,
     .admin-topbar { padding: 0 16px; }
 
-    .navbar-brand span { display: none; }  /* show only icon on mobile */
+    .navbar-brand span { display: none; }  /* icon only on mobile */
 }
 
 @media (max-width: 480px) {
@@ -1228,7 +1201,7 @@ h6 { font-size: 13px; font-weight: 600; line-height: 1.5; }
    21. UTILITY & SHORTHAND CLASSES
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Stat icon gradient variants (replaces inline style="background:...") */
+/* stat icon gradient variants */
 .si-purple { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
 .si-pink   { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
 .si-blue   { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
@@ -1236,7 +1209,7 @@ h6 { font-size: 13px; font-weight: 600; line-height: 1.5; }
 .si-teal   { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
 .si-orange { background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%); }
 
-/* Thumbnail placeholder (replaces raw inline-style fallback divs) */
+/* thumbnail placeholder when no image */
 .thumb-placeholder {
     width: 100%;
     height: 180px;
@@ -1250,10 +1223,10 @@ h6 { font-size: 13px; font-weight: 600; line-height: 1.5; }
 }
 .thumb-placeholder.tall { height: 200px; }
 
-/* Star colour */
+/* star rating color */
 .star-gold { color: #f59e0b; }
 
-/* Text utilities */
+/* text utilities */
 .text-muted { color: var(--c-text-3, #6b7280); }
 .text-faint { color: var(--c-text-4, #9ca3af); }
 .text-sm    { font-size: 12px; }
@@ -1261,7 +1234,7 @@ h6 { font-size: 13px; font-weight: 600; line-height: 1.5; }
 .fw-600     { font-weight: 600; }
 .fw-700     { font-weight: 700; }
 
-/* Admin two-column layout (replaces inline style="display:grid;...") */
+/* admin two-column grid */
 .admin-grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;

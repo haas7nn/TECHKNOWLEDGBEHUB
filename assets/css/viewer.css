@@ -1,9 +1,6 @@
-/**
- * Viewer / Student Pages — Complete Stylesheet
- * Hasan Fardan - 202301686
- */
+/* viewer and student pages */
 
-/* Import shared design tokens so var(--c-*) resolves on all viewer pages */
+/* shared design tokens */
 @import url('./shared.css');
 
 /* ===================== RESET & BASE ===================== */
@@ -14,9 +11,9 @@
 }
 
 body {
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background: #f0f2f8;
-    color: #2d3748;
+    font-family: var(--font);
+    background: var(--c-page);
+    color: var(--c-text);
     font-size: 15px;
     line-height: 1.6;
 }
@@ -554,12 +551,12 @@ section h2 i { color: #667eea; }
 
 .card-thumbnail img { width: 100%; height: 100%; object-fit: cover; }
 
-/* Placeholder icon shown when a tutorial has no thumbnail */
+/* icon when no thumbnail */
 .thumb-icon {
     font-size: 44px;
     color: #c3cfe0;
 }
-/* Placeholder div (used in continue-learning cards) */
+/* continue-learning card placeholder */
 .thumb-placeholder {
     width: 100%;
     height: 100%;
@@ -570,7 +567,7 @@ section h2 i { color: #667eea; }
     color: #c3cfe0;
     background: linear-gradient(135deg, #f0f2f8, #e8ecf1);
 }
-/* Media attachment badge shown on tutorial cards */
+/* media attachment badge */
 .media-badge {
     display: inline-flex;
     align-items: center;
@@ -717,7 +714,7 @@ section h2 i { color: #667eea; }
     gap: 12px;
 }
 
-/* Row inside the filter form — aligns controls horizontally */
+/* filter controls row */
 .filter-row {
     display: flex;
     gap: 12px;
@@ -778,7 +775,7 @@ section h2 i { color: #667eea; }
 
 .results-info strong { color: #2d3748; }
 
-/* browse grid (larger cards) */
+/* browse larger card grid */
 .tutorials-grid-large {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -971,7 +968,7 @@ section h2 i { color: #667eea; }
     align-items: start;
 }
 
-/* content sections */
+/* tutorial content sections */
 .video-section, .content-section, .rating-section, .comments-section {
     background: #fff;
     border-radius: 14px;
@@ -1024,7 +1021,7 @@ section h2 i { color: #667eea; }
     margin-bottom: 14px;
 }
 
-/* star rating */
+/* star rating input */
 .star-rating-input {
     display: flex;
     flex-direction: row-reverse;
@@ -1044,7 +1041,7 @@ section h2 i { color: #667eea; }
 
 .rating-form { text-align: center; }
 
-/* comments */
+/* comment form */
 .comment-form {
     display: flex;
     gap: 14px;
@@ -1105,7 +1102,7 @@ section h2 i { color: #667eea; }
 
 .empty-comments i { font-size: 48px; display: block; margin-bottom: 12px; }
 
-/* sidebar cards */
+/* tutorial sidebar cards */
 .tutorial-sidebar { display: flex; flex-direction: column; gap: 20px; }
 
 .sidebar-card {
@@ -1180,6 +1177,24 @@ section h2 i { color: #667eea; }
     box-shadow: 0 3px 8px rgba(102,126,234,0.3);
 }
 
+/* ===================== HAMBURGER BUTTON ===================== */
+.sidebar-toggle-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    color: #555;
+    font-size: 20px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s, color 0.2s;
+}
+.sidebar-toggle-btn:hover { background: #f0f2ff; color: #667eea; }
+
 /* ===================== RESPONSIVE ===================== */
 @media (max-width: 1024px) {
     .tutorial-content-wrapper {
@@ -1188,9 +1203,10 @@ section h2 i { color: #667eea; }
 }
 
 @media (max-width: 768px) {
+    .sidebar-toggle-btn { display: flex; }
     .viewer-main { margin-left: 0; padding: 16px; }
-    .viewer-sidebar { transform: translateX(-100%); transition: transform 0.3s; }
-    .viewer-sidebar.open { transform: translateX(0); }
+    .viewer-sidebar { transform: translateX(-100%); transition: transform 0.3s; z-index: 999; }
+    .viewer-sidebar.open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,0.15); }
     .tutorials-grid, .tutorials-grid-large, .continue-grid { grid-template-columns: 1fr; }
     .filters-form { flex-direction: column; align-items: stretch; }
     .tutorial-header { padding: 24px; }
@@ -1204,7 +1220,7 @@ section h2 i { color: #667eea; }
     .dashboard-header { flex-direction: column; align-items: flex-start; }
 }
 
-/* ===================== TUTORIAL VIEW PAGE (tview-) ===================== */
+/* ===================== TUTORIAL VIEW PAGE ===================== */
 
 .tview-wrap {
     padding-top: 90px;
@@ -1217,7 +1233,7 @@ section h2 i { color: #667eea; }
 
 .tview-back { margin-bottom: 20px; }
 
-/* hero header */
+/* hero header section */
 .tview-hero {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: #fff;
@@ -1294,7 +1310,7 @@ section h2 i { color: #667eea; }
 
 .btn-outline-white:hover { background: rgba(255,255,255,0.25); color: #fff; }
 
-/* two-column layout */
+/* two-column body layout */
 .tview-body {
     display: grid;
     grid-template-columns: 1fr 320px;
@@ -1304,7 +1320,7 @@ section h2 i { color: #667eea; }
 
 .tview-main { display: flex; flex-direction: column; gap: 24px; }
 
-/* cards */
+/* tview content card */
 .tview-card {
     background: #fff;
     border-radius: 14px;
@@ -1336,7 +1352,7 @@ section h2 i { color: #667eea; }
     margin-left: 6px;
 }
 
-/* video embed */
+/* video embed wrapper */
 .tview-video-wrapper {
     position: relative;
     padding-bottom: 56.25%;
@@ -1353,7 +1369,7 @@ section h2 i { color: #667eea; }
     border: none;
 }
 
-/* tutorial body text */
+/* tutorial body text styles */
 .tview-content-body {
     font-size: 15px;
     line-height: 1.85;
@@ -1407,7 +1423,7 @@ section h2 i { color: #667eea; }
     margin: 12px 0;
 }
 
-/* star rating */
+/* star rating section */
 .tview-hint {
     color: #718096;
     font-size: 14px;
@@ -1439,7 +1455,7 @@ section h2 i { color: #667eea; }
 .tview-stars label:hover,
 .tview-stars label:hover ~ label { color: #ffc107; }
 
-/* comments */
+/* comments area */
 .tview-comment-form {
     display: flex;
     gap: 14px;
@@ -1502,7 +1518,7 @@ section h2 i { color: #667eea; }
 .tview-comment-meta span { font-size: 12px; color: #a0aec0; }
 .tview-comment-body p { font-size: 14px; color: #4a5568; line-height: 1.6; }
 
-/* sidebar */
+/* tview sidebar */
 .tview-sidebar { display: flex; flex-direction: column; gap: 20px; }
 
 .tview-sidebar-card {
@@ -1556,7 +1572,7 @@ section h2 i { color: #667eea; }
 
 .tview-your-rating { text-align: center; padding: 8px 0; }
 
-/* responsive */
+/* tview responsive */
 @media (max-width: 1024px) {
     .tview-body { grid-template-columns: 1fr; }
     .tview-sidebar { display: grid; grid-template-columns: repeat(2, 1fr); }

@@ -8,44 +8,38 @@ $conn = $db->connect();
 // stop if db down
 if (!$conn) { setFlashMessage("Database error. Please try again.", "error"); redirect("auth/login.php"); }
 
-// handle any action the admin submitted via the form
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrfFromPost()) {
-    // get action and user
     $action  = clean($_POST['action']  ?? '');
     $user_id = (int)($_POST['user_id'] ?? 0);
 
-    // check user id valid
+    // block self-action
     if ($user_id && $user_id !== $current_user_id) {
         if ($action === 'activate') {
-            // set user active
             $conn->prepare("UPDATE dbProj_users SET status='active' WHERE user_id=:id")->execute([':id'=>$user_id]);
             setFlashMessage('User activated.','success');
         } elseif ($action === 'deactivate') {
-            // set user inactive
             $conn->prepare("UPDATE dbProj_users SET status='inactive' WHERE user_id=:id")->execute([':id'=>$user_id]);
             setFlashMessage('User deactivated.','success');
         } elseif ($action === 'change_role') {
-            // read the new role the admin chose
             $new_role = clean($_POST['new_role'] ?? '');
-            // only save if the role is one of the allowed values
+            // validate role before saving
             if (in_array($new_role,['viewer','creator','admin'])) {
                 $conn->prepare("UPDATE dbProj_users SET role=:role WHERE user_id=:id")->execute([':role'=>$new_role,':id'=>$user_id]);
                 setFlashMessage('Role updated.','success');
             }
         }
     }
-    // send the admin back to the users page after any action
     redirect('admin/users.php');
 }
 
-// read the search text role filter and current page from the url
+// read search filter and page from url
 $search   = clean($_GET['search'] ?? '');
 $role     = clean($_GET['role']   ?? '');
 $page     = max(1, (int)($_GET['page'] ?? 1));
 $per_page = 15;
 $offset   = ($page - 1) * $per_page;
 
-// build where clause
+// build dynamic where clause
 $where  = ['1=1'];
 $params = [];
 if ($search) {
@@ -60,13 +54,13 @@ if ($role) {
 }
 $where_sql = implode(' AND ', $where);
 
-// count for pagination
+// total rows for pagination
 $count_stmt = $conn->prepare("SELECT COUNT(*) FROM dbProj_users WHERE $where_sql");
 $count_stmt->execute($params);
 $total       = $count_stmt->fetchColumn();
 $total_pages = max(1, (int)ceil($total / $per_page));
 
-// get current page
+// fetch current page of users
 $sql = "SELECT user_id, full_name, email, role, status, created_at
         FROM dbProj_users WHERE $where_sql
         ORDER BY created_at DESC
@@ -87,16 +81,14 @@ $users = $stmt->fetchAll();
 <?php include '../includes/admin-nav.php'; ?>
 <div class="admin-wrap"><main class="admin-main">
 
-    <!-- page title showing total user count and current page -->
     <div class="page-header">
         <div><h1><i class="fas fa-users"></i> Manage Users</h1><p><?= $total ?> user<?= $total !== 1 ? 's' : '' ?> found</p></div>
     </div>
     <?php displayFlashMessage(); ?>
 
-    <!-- search and role filter bar -->
     <form method="GET" class="filter-bar">
         <input type="text" name="search" placeholder="Search name or email..." value="<?= e($search) ?>">
-        <!-- dropdown to filter by user role -->
+        <!-- filter by role -->
         <select name="role">
             <option value="">All Roles</option>
             <option value="viewer"  <?= $role==='viewer'  ?'selected':'' ?>>Viewer</option>
@@ -107,30 +99,28 @@ $users = $stmt->fetchAll();
         <a href="users.php" class="btn btn-outline btn-sm">Clear</a>
     </form>
 
-    <!-- users table -->
     <div class="admin-card">
         <div class="admin-card-body" style="padding:0;">
         <table class="admin-table">
             <thead><tr><th>ID</th><th>Name / Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
             <tbody>
             <?php foreach ($users as $u): ?>
-            <!-- one row per user -->
             <tr>
                 <td style="color:#a0aec0;font-size:12px;">#<?= $u['user_id'] ?></td>
                 <td>
                     <strong><?= e($u['full_name']) ?></strong><br>
                     <small style="color:#718096;"><?= e($u['email']) ?></small>
                 </td>
-                <!-- coloured badge based on role -->
+                <!-- badge colour by role -->
                 <td><span class="badge badge-<?= $u['role']==='admin'?'danger':($u['role']==='creator'?'purple':'info') ?>"><?= ucfirst($u['role']) ?></span></td>
-                <!-- coloured badge based on status -->
+                <!-- badge colour by status -->
                 <td><span class="badge badge-<?= $u['status']==='active'?'success':'warning' ?>"><?= ucfirst($u['status']) ?></span></td>
                 <td style="font-size:12px;color:#718096;"><?= formatDate($u['created_at']) ?></td>
                 <td>
-                    <!-- only show action buttons for other users not the logged in admin -->
+                    <!-- hide actions for own account -->
                     <?php if ($u['user_id'] !== $current_user_id): ?>
                     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-                        <!-- activate or deactivate button depending on current status -->
+                        <!-- toggle active or inactive -->
                         <form method="POST" style="display:contents;">
                             <?php csrfField(); ?>
                             <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
@@ -140,7 +130,7 @@ $users = $stmt->fetchAll();
                                 <i class="fas fa-<?= $u['status']==='active'?'ban':'check' ?>"></i>
                             </button>
                         </form>
-                        <!-- change role dropdown and save button -->
+                        <!-- change role form -->
                         <form method="POST" style="display:contents;">
                             <?php csrfField(); ?>
                             <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
@@ -155,7 +145,6 @@ $users = $stmt->fetchAll();
                         </form>
                     </div>
                     <?php else: ?>
-                        <!-- label to show this row belongs to the currently logged in admin -->
                         <small style="color:#a0aec0;">You</small>
                     <?php endif; ?>
                 </td>
@@ -166,7 +155,6 @@ $users = $stmt->fetchAll();
         </div>
     </div>
 
-    <!-- pagination controls shown only when there is more than one page -->
     <?php if ($total_pages > 1): ?>
     <?php $base = http_build_query(array_filter(['search' => $search, 'role' => $role])); ?>
     <div class="pagination">

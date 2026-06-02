@@ -1,9 +1,5 @@
-/**
- * Authentication Pages Stylesheet
- * Making the login and register pages look clean and professional
- * Hasan Fardan - 202301686
- */
-/* Shared design tokens — provides --c-* variables and flash message styles */
+/* auth pages */
+/* shared design tokens */
 @import url('./shared.css');
 
 /* ==================== RESET & BASE ==================== */
@@ -13,34 +9,33 @@
     box-sizing: border-box;
 }
 
+/* auth color aliases to canonical shared palette */
 :root {
-    --primary-color: #667eea;
-    --primary-dark: #5568d3;
-    --secondary-color: #764ba2;
-    --success-color: #27ae60;
-    --error-color: #e74c3c;
-    --warning-color: #f39c12;
-    --info-color: #3498db;
-    --text-dark: #2c3e50;
-    --text-light: #7f8c8d;
-    --border-color: #dfe6e9;
-    --bg-light: #f8f9fa;
-    --white: #ffffff;
-    --shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
-    --shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.15);
+    --primary-color:   var(--c-primary);
+    --primary-dark:    var(--c-primary-dk);
+    --secondary-color: var(--c-secondary);
+    --success-color:   var(--c-success);
+    --error-color:     var(--c-danger);
+    --warning-color:   var(--c-warning);
+    --info-color:      var(--c-info);
+    --text-dark:       var(--c-text);
+    --text-light:      var(--c-text-3);
+    --border-color:    var(--c-border);
+    --bg-light:        #f8fafc;
+    --white:           var(--c-surface);
+    --shadow:          var(--shadow-lg);
+    --shadow-hover:    var(--shadow-xl);
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: var(--font);
     line-height: 1.6;
     color: var(--text-dark);
-    /* giving the background that nice purple to blue gradient */
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    background: var(--c-gradient);
     min-height: 100vh;
 }
 
 /* ==================== AUTH WRAPPER ==================== */
-/* making sure the login box stays perfectly centered on the screen */
 .auth-wrapper {
     min-height: 100vh;
     display: flex;
@@ -63,8 +58,7 @@ body {
     max-width: 1000px;
 }
 
-/* ==================== AUTH BOX (Form Side) ==================== */
-/* this is the white area where the actual form sits */
+/* ==================== AUTH BOX ==================== */
 .auth-box {
     flex: 1;
     padding: 60px 50px;
@@ -94,7 +88,7 @@ body {
     margin: 0;
 }
 
-/* Brand text next to icon — used as <span> in login/register/forgot */
+/* brand text span next to icon */
 .auth-logo span {
     font-size: 22px;
     font-weight: 800;
@@ -120,7 +114,6 @@ body {
 }
 
 /* ==================== ALERTS ==================== */
-/* little notification popups for errors or success messages */
 .alert {
     padding: 15px 20px;
     border-radius: 8px;
@@ -195,7 +188,7 @@ body {
     font-size: 16px;
 }
 
-/* making the input fields look modern with some padding and a subtle border */
+/* input field style */
 .form-control {
     width: 100%;
     padding: 14px 16px;
@@ -206,7 +199,7 @@ body {
     font-family: inherit;
 }
 
-/* highlight the box when the user clicks into it */
+/* focus ring on input */
 .form-control:focus {
     outline: none;
     border-color: var(--primary-color);
@@ -226,7 +219,7 @@ body {
     padding-right: 45px;
 }
 
-/* positioning the eye icon inside the password field */
+/* toggle password icon position */
 .toggle-password {
     position: absolute;
     right: 12px;
@@ -307,7 +300,7 @@ body {
     cursor: pointer;
 }
 
-/* spacing out the remember me and forgot password links */
+/* remember me and forgot link row */
 .form-options {
     display: flex;
     justify-content: space-between;
@@ -347,14 +340,14 @@ body {
     width: 100%;
 }
 
-/* adding a gradient and a soft shadow to the primary button */
+/* primary button gradient */
 .btn-primary {
     background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
     color: var(--white);
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
-/* simple lift effect when hovering over the button */
+/* hover lift */
 .btn-primary:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
@@ -386,7 +379,6 @@ body {
 }
 
 /* ==================== DIVIDER ==================== */
-/* that "or" line you see between login options */
 .auth-divider {
     text-align: center;
     margin: 30px 0;
@@ -418,8 +410,7 @@ body {
     font-size: 14px;
 }
 
-/* ==================== AUTH SIDE (Image/Info Side) ==================== */
-/* the colorful side panel with the extra text and stats */
+/* ==================== AUTH SIDE ==================== */
 .auth-side {
     flex: 1;
     background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
@@ -434,7 +425,7 @@ body {
     max-width: 400px;
 }
 
-/* Brand name + icon displayed at the top of the gradient side panel */
+/* brand on gradient side panel */
 .auth-side-brand {
     display: flex;
     align-items: center;
@@ -529,7 +520,7 @@ body {
 }
 
 /* ==================== DEMO ACCOUNTS ==================== */
-/* simple box to show test login info during development before submission */
+/* test credentials box for development */
 .demo-accounts {
     margin-top: 20px;
     padding: 15px;
@@ -551,7 +542,7 @@ body {
 }
 
 /* ==================== RESPONSIVE ==================== */
-/* hiding the side panel on tablets and smaller screens to keep the form readable */
+/* hide side panel on tablet and smaller */
 @media (max-width: 968px) {
     .auth-side {
         display: none;
@@ -562,7 +553,7 @@ body {
     }
 }
 
-/* stacking things and adjusting sizes for mobile phones */
+/* mobile adjustments */
 @media (max-width: 576px) {
     .auth-box {
         padding: 40px 30px;
@@ -584,7 +575,6 @@ body {
 }
 
 /* ==================== ANIMATIONS ==================== */
-/* adding a smooth fade in effect when the page loads */
 @keyframes fadeInUp {
     from {
         opacity: 0;

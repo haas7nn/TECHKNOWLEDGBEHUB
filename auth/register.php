@@ -1,10 +1,10 @@
 <?php
-// signup page where new users create their account
+// registration page
 
 require_once '../config/config.php';
 require_once '../classes/User.php';
 
-// if they are already logged in just send them to their dashboard
+// redirect if already logged in
 if (isLoggedIn()) {
     $role = getCurrentUserRole();
     if ($role === 'admin') {
@@ -16,7 +16,7 @@ if (isLoggedIn()) {
     }
 }
 
-// default values for the error message and form fields
+// init form defaults
 $error = '';
 $form_data = [
     'full_name' => '',
@@ -24,68 +24,60 @@ $form_data = [
     'role' => 'viewer'
 ];
 
-// handle the logic when they hit create account
+// handle POST submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // csrf check
     if (!verifyCsrfFromPost()) {
         $error = 'Invalid security token. Please try again.';
-        // repopulate form data so the fields do not go blank after the error
+        // repopulate fields after CSRF failure
         $form_data = [
             'full_name' => clean($_POST['full_name'] ?? ''),
             'email'     => clean($_POST['email']     ?? ''),
             'role'      => clean($_POST['role']      ?? 'viewer'),
         ];
     } else {
-        // clean all the submitted inputs
+        // sanitize inputs
         $full_name = clean($_POST['full_name'] ?? '');
         $email = clean($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
         $confirm_password = $_POST['confirm_password'] ?? '';
         $role = clean($_POST['role'] ?? '');
 
-        // remember what they typed so the form keeps their values if there is an error
+        // keep values for re-display on error
         $form_data = [
             'full_name' => $full_name,
             'email' => $email,
             'role' => $role
         ];
 
-        // run all server side validation checks in order
-        // check the terms checkbox first since html required can be bypassed
+        // terms checked first — HTML required can be bypassed
         if (!isset($_POST['terms'])) {
             $error = 'You must agree to the Terms & Conditions to register.';
         } elseif (empty($full_name) || empty($email) || empty($password) || empty($confirm_password)) {
-            // make sure every field has something in it
             $error = 'All fields are required';
         } elseif (strlen($full_name) < 3) {
-            // names shorter than 3 characters are not valid
             $error = 'Name must be at least 3 characters';
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            // check the email format
             $error = 'Please enter a valid email address';
         } elseif (strlen($password) < 8) {
-            // password must be at least 8 characters long
             $error = 'Password must be at least 8 characters';
         } elseif (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/', $password)) {
-            // password needs uppercase lowercase and a number
+            // must have upper lower and digit
             $error = 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
         } elseif ($password !== $confirm_password) {
-            // both password fields must match
             $error = 'Passwords do not match';
         } elseif (!in_array($role, ['viewer', 'creator'])) {
-            // only allow the two valid role options
+            // reject unexpected role values
             $error = 'Invalid role selected';
         } else {
-            // everything looks good so try to save them to the database
             $user = new User();
             $result = $user->register($full_name, $email, $password, $role);
 
             if ($result['success']) {
-                // redirect right away after success to prevent double submission on refresh
+                // redirect prevents double-submit on refresh
                 setFlashMessage('Account created successfully! Please login.', 'success');
                 redirect('auth/login.php');
             } else {
-                // something went wrong like email already taken
                 $error = $result['message'];
             }
         }
@@ -104,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 <div class="auth-wrapper">
 
-    <!-- Left gradient panel -->
+    <!-- left panel -->
     <div class="auth-side">
         <div class="auth-side-content">
             <div class="auth-side-brand">
@@ -122,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 
-    <!-- Right form panel -->
+    <!-- right form panel -->
     <div class="auth-container">
         <div class="auth-box">
 
@@ -143,11 +135,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             <?php endif; ?>
 
-            <!-- actual registration form starts here -->
+            <!-- registration form -->
             <form method="POST" action="" id="registerForm" class="auth-form" novalidate>
                 <?php csrfField(); ?>
 
-                <!-- name input -->
+                <!-- full name -->
                 <div class="form-group">
                     <label for="full_name">Full Name</label>
                     <input
@@ -163,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <span class="error-message" id="name-error"></span>
                 </div>
 
-                <!-- email input -->
+                <!-- email -->
                 <div class="form-group">
                     <label for="email">Email Address</label>
                     <input
@@ -178,7 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <span class="error-message" id="email-error"></span>
                 </div>
 
-                <!-- password field with the strength meter below it -->
+                <!-- password with strength meter -->
                 <div class="form-group">
                     <label for="password">Password</label>
                     <div class="password-input-wrapper">
@@ -206,7 +198,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </small>
                 </div>
 
-                <!-- confirm password so they do not mistype it -->
+                <!-- confirm password -->
                 <div class="form-group">
                     <label for="confirm_password">Confirm Password</label>
                     <div class="password-input-wrapper">
@@ -225,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <span class="error-message" id="confirm-error"></span>
                 </div>
 
-                <!-- let them pick if they want to learn or teach -->
+                <!-- role selector -->
                 <div class="form-group">
                     <label for="role">I want to</label>
                     <select id="role" name="role" class="form-control" required>
@@ -241,7 +233,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </small>
                 </div>
 
-                <!-- they must agree to the terms before they can register -->
+                <!-- terms checkbox -->
                 <div class="form-group checkbox-group">
                     <label class="checkbox-label">
                         <input type="checkbox" id="terms" name="terms" required>
@@ -250,7 +242,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <span class="error-message" id="terms-error"></span>
                 </div>
 
-                <!-- submit button to create the account -->
+                <!-- submit -->
                 <button type="submit" class="btn btn-primary btn-block">
                     <i class="fas fa-user-plus"></i>
                     Create Account
@@ -272,26 +264,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <script src="<?= asset('js/validation.js') ?>"></script>
 <script>
-    // update the strength bar as the user types their password
+    // live password strength meter
     document.getElementById('password').addEventListener('input', function() {
         const password = this.value;
         const strengthBar = document.getElementById('strength-bar');
         const strengthText = document.getElementById('strength-text');
 
-        // start at zero and add a point for each requirement met
+        // one point per requirement met
         let strength = 0;
         let text = '';
         let color = '';
 
-        // these checks match what the server validates so they stay consistent
+        // mirrors server-side validation rules
         if (password.length >= 8) strength++;
         if (password.match(/[a-z]/)) strength++;
         if (password.match(/[A-Z]/)) strength++;
         if (password.match(/[0-9]/)) strength++;
-        // special characters earn a bonus point but are not required
+        // special char gives bonus point
         if (password.match(/[^a-zA-Z0-9]/)) strength++;
 
-        // pick the label and color based on the final score
+        // map score to label and color
         switch(strength) {
             case 0:
             case 1:
@@ -313,14 +305,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 break;
         }
 
-        // update the bar width and the text label
+        // update bar and label
         strengthBar.style.width = (strength * 20) + '%';
         strengthBar.style.backgroundColor = color;
         strengthText.textContent = text;
         strengthText.style.color = color;
     });
 
-    // show or hide the password when they click the eye icon
+    // toggle password visibility
     function togglePassword(fieldId) {
         const field = document.getElementById(fieldId);
         const eye = document.getElementById(fieldId + '-eye');

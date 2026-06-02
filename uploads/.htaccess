@@ -4,8 +4,8 @@
     Deny from all
 </FilesMatch>
 
-# Allow image display
-<FilesMatch "\.(jpg|jpeg|png|gif|webp|pdf|mp4|webm)$">
+# Allow image and media display (svg added for thumbnail support)
+<FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|pdf|mp4|webm|ogg|avi|doc|docx|zip|txt)$">
     Order Allow,Deny
     Allow from all
 </FilesMatch>

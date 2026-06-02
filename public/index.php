@@ -1,17 +1,16 @@
 <?php
-// this file exists so old links to public/indexphp do not result in a 404 error
-// it redirects guests to the search page and logged in users to their own dashboard
+// redirect shim — guests to search logged-in users to their dashboard
 require_once '../config/config.php';
 
-// guests go to search
+// guest redirect
 if (!isLoggedIn()) {
     redirect('public/search.php');
 }
 
-// read the logged in user role to decide where to send them
+// role-based redirect
 $role = getCurrentUserRole();
 
-// redirect to the correct dashboard based on the user role
+// send to correct dashboard by role
 if ($role === 'admin') {
     redirect('admin/dashboard.php');
 } elseif ($role === 'creator') {

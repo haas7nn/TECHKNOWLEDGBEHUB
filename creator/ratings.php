@@ -1,5 +1,5 @@
 <?php
-// ratings page showing all the ratings learners have left on this creator's tutorials
+// ratings for own tutorials
 
 require_once '../includes/auth-check.php';
 require_once '../classes/Tutorial.php';
@@ -14,22 +14,22 @@ if (!$conn) {
     redirect('creator/dashboard.php');
 }
 
-// load all tutorials for this instructor so we can get their ids
+// get own tutorial ids
 $tutObj = new Tutorial();
 $my_tutorials = $tutObj->getByInstructor($current_user_id);
 $tutorial_ids = array_column($my_tutorials, 'tutorial_id');
 
-// default values used when there are no tutorials or ratings yet
+// default values before queries run
 $ratings      = [];
 $overall_avg  = 0;
 $total_ratings = 0;
 $dist = [5=>0, 4=>0, 3=>0, 2=>0, 1=>0];
 
-// safe subquery identifies all tutorials by this creator — no raw string interpolation
+// safe subquery for own tutorials
 $subquery = "SELECT tutorial_id FROM dbProj_tutorials WHERE instructor_id = :uid";
 
 if (!empty($tutorial_ids)) {
-    // get the average rating and rating count for each tutorial using the subquery
+    // avg rating per tutorial
     $tRatingStmt = $conn->prepare(
         "SELECT t.tutorial_id, t.title, t.slug, t.status,
                 COALESCE(AVG(r.rating),0) AS avg_rating,
@@ -43,14 +43,14 @@ if (!empty($tutorial_ids)) {
     $tRatingStmt->execute([':uid' => $current_user_id]);
     $ratings = $tRatingStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // calculate the overall weighted average rating across all tutorials
+    // weighted overall average
     foreach ($ratings as $r) {
         $total_ratings += (int)$r['rating_count'];
         $overall_avg   += (float)$r['avg_rating'] * (int)$r['rating_count'];
     }
     $overall_avg = $total_ratings > 0 ? round($overall_avg / $total_ratings, 2) : 0;
 
-    // count how many ratings were given at each star level for the distribution chart
+    // count ratings by star level
     $distStmt = $conn->prepare(
         "SELECT rating, COUNT(*) AS cnt
          FROM dbProj_ratings
@@ -120,7 +120,7 @@ if (!empty($tutorial_ids)) {
         <?php displayFlashMessage(); ?>
 
         <?php if ($total_ratings === 0): ?>
-            <!-- empty state shown when no ratings have been received yet -->
+            <!-- no ratings yet -->
             <div class="empty-state" style="background:#fff; border-radius:16px; box-shadow:0 2px 8px rgba(0,0,0,.07);">
                 <i class="fas fa-star"></i>
                 <h3>No Ratings Yet</h3>
@@ -131,10 +131,10 @@ if (!empty($tutorial_ids)) {
             </div>
         <?php else: ?>
 
-        <!-- overview row with the big average rating card and the star distribution chart -->
+        <!-- avg rating card and distribution chart -->
         <div class="ratings-top">
 
-            <!-- large card showing the overall average score and star icons -->
+            <!-- big overall average card -->
             <div class="big-rating-card">
                 <div class="big-rating-num"><?= number_format($overall_avg, 1) ?></div>
                 <div class="big-rating-stars">
@@ -145,7 +145,7 @@ if (!empty($tutorial_ids)) {
                 <div class="big-rating-sub"><?= number_format($total_ratings) ?> total rating<?= $total_ratings!==1?'s':'' ?></div>
             </div>
 
-            <!-- bar chart showing how many ratings were given at each star level from 5 down to 1 -->
+            <!-- star distribution bars -->
             <div class="dist-card">
                 <h3><i class="fas fa-chart-bar" style="color:#667eea; margin-right:6px;"></i> Rating Distribution</h3>
                 <?php for ($star = 5; $star >= 1; $star--): ?>
@@ -160,7 +160,7 @@ if (!empty($tutorial_ids)) {
             </div>
         </div>
 
-        <!-- table showing average rating and vote count broken down by tutorial -->
+        <!-- ratings broken down by tutorial -->
         <div class="section-card">
             <div class="section-header">
                 <h2><i class="fas fa-list" style="margin-right:8px;"></i> Ratings by Tutorial</h2>
@@ -183,7 +183,7 @@ if (!empty($tutorial_ids)) {
                                 <strong><?= e(truncate($r['title'], 50)) ?></strong>
                             </td>
                             <td>
-                                <!-- colour the status badge green for published and orange for draft -->
+                                <!-- status badge colour -->
                                 <span style="padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600;
                                     background:<?= $r['status']==='published'?'#e8f8f0':'#fff3e0' ?>;
                                     color:<?= $r['status']==='published'?'#27ae60':'#f39c12' ?>;">
@@ -200,7 +200,7 @@ if (!empty($tutorial_ids)) {
                             <td style="color:#7f8c8d;"><?= $r['rating_count'] ?> vote<?= $r['rating_count']!==1?'s':'' ?></td>
                             <td>
                                 <?php
-                                // show filled gold stars up to the rounded average and empty grey stars for the rest
+                                // filled stars up to rounded avg
                                 $filled = round($r['avg_rating']);
                                 for ($s = 1; $s <= 5; $s++):
                                 ?>

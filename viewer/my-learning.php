@@ -1,27 +1,26 @@
 <?php
-// my learning page that shows all tutorials this student has started or completed
+// student learning list with tabs for all in-progress and completed
 
 require_once '../includes/viewer-auth-check.php';
 
 $page_title  = 'My Learning';
-// read which tab the user clicked or default to showing everything
+// active tab from url or default all
 $active_tab = $_GET['tab'] ?? 'all';
 $allowed_tabs = ['all', 'in-progress', 'completed'];
 if (!in_array($active_tab, $allowed_tabs)) { $active_tab = 'all'; }
 $css_version = @filemtime(__DIR__ . '/../assets/css/viewer.css') ?: time();
 
-// db connect
+// db connection
 $database = new Database();
 $conn     = $database->connect();
 
-// if no db
+// redirect if db failed
 if (!$conn) {
     setFlashMessage('Database connection error. Please try again.', 'error');
     redirect('viewer/dashboard.php');
 }
 
-// build the main query that returns one row per tutorial the user has any activity on
-// the progress column uses recency to estimate how far through they are
+// one row per tutorial with recency-based progress estimate
 $query = "
     SELECT
         t.tutorial_id,
@@ -36,9 +35,9 @@ $query = "
         COALESCE(AVG(r.rating), 0)         AS avg_rating,
         COUNT(DISTINCT r.rating_id)        AS rating_count,
         MAX(ua.activity_date)              AS last_activity_date,
-        /* 1 if the user has ever marked this tutorial complete else 0 */
+        /* 1 if completed else 0 */
         MAX(IF(ua.activity_type = 'complete', 1, 0)) AS is_completed,
-        /* progress is 100 if complete or based on how recently they viewed it */
+        /* progress 100 if complete else recency bucket */
         CASE
             WHEN MAX(IF(ua.activity_type = 'complete', 1, 0)) = 1 THEN 100
             WHEN MAX(ua.activity_date) >= DATE_SUB(NOW(), INTERVAL 7 DAY)  THEN 75
@@ -58,14 +57,14 @@ $query = "
         t.duration_minutes, t.view_count, c.category_name, u.full_name
 ";
 
-// apply a having clause to filter by the active tab after the group by
+// having clause filters by active tab
 if ($active_tab === 'completed') {
     $query .= " HAVING MAX(IF(ua.activity_type = 'complete', 1, 0)) = 1";
 } elseif ($active_tab === 'in-progress') {
     $query .= " HAVING MAX(IF(ua.activity_type = 'complete', 1, 0)) = 0";
 }
 
-// sort by most recently touched so the newest activity appears at the top
+// newest activity first
 $query .= " ORDER BY last_activity_date DESC";
 
 try {
@@ -97,7 +96,7 @@ try {
 
         <main class="viewer-main">
 
-            <!-- page heading -->
+            <!-- page header -->
             <div class="dashboard-header">
                 <div>
                     <h1><i class="fas fa-graduation-cap"></i> My Learning</h1>
@@ -107,7 +106,7 @@ try {
 
             <?php displayFlashMessage(); ?>
 
-            <!-- tab buttons to switch between all, in progress and completed tutorials -->
+            <!-- learning status tabs -->
             <div class="my-learning-tabs">
                 <a href="?tab=all"
                    class="tab-btn <?= $active_tab === 'all' ? 'active' : '' ?>">
@@ -124,7 +123,7 @@ try {
             </div>
 
             <?php if (empty($my_tutorials)): ?>
-                <!-- empty state with a message that matches whichever tab is active -->
+                <!-- empty state per tab -->
                 <div class="empty-state">
                     <i class="fas fa-book-reader"></i>
                     <?php if ($active_tab === 'completed'): ?>
@@ -142,12 +141,12 @@ try {
                     </a>
                 </div>
             <?php else: ?>
-                <!-- grid of tutorial cards for the tutorials this student has touched -->
+                <!-- tutorial cards -->
                 <div class="tutorials-grid">
                     <?php foreach ($my_tutorials as $tut): ?>
                     <div class="tutorial-card">
 
-                        <!-- thumbnail with a difficulty badge overlaid -->
+                        <!-- thumbnail with difficulty badge -->
                         <div class="card-thumbnail">
                             <?php if (!empty($tut['thumbnail'])): ?>
                                 <img src="<?= SITE_URL ?>/uploads/<?= e($tut['thumbnail']) ?>"
@@ -171,7 +170,7 @@ try {
                                 <span><?= e($tut['instructor_name']) ?></span>
                             </div>
 
-                            <!-- progress bar that turns green when the tutorial is complete -->
+                            <!-- progress bar green when complete -->
                             <div class="progress-wrapper">
                                 <div class="progress-bar">
                                     <div class="progress-fill"
@@ -189,7 +188,7 @@ try {
                             </div>
                         </div>
 
-                        <!-- continue or review button and a remove link -->
+                        <!-- continue or review and remove -->
                         <div class="card-footer">
                             <a href="<?= SITE_URL ?>/viewer/tutorial-view.php?slug=<?= urlencode($tut['slug']) ?>"
                                class="btn btn-primary btn-sm" style="flex:1;justify-content:center;">
@@ -210,10 +209,9 @@ try {
     </div>
 
     <script>
-    // confirm then ajax
+    // ajax remove with confirm
     function removeTutorial(tutorialId, btn) {
         if (!confirm('Remove this tutorial from your learning list?')) return;
-        // disable the button and show a spinner while the request is in flight
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
@@ -230,7 +228,6 @@ try {
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                // remove card
                 btn.closest('.tutorial-card').remove();
             } else {
                 alert(data.message || 'Failed to remove. Please try again.');

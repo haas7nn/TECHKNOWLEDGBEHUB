@@ -1,19 +1,18 @@
 <?php
-// api endpoint that marks a tutorial as complete for the current user
-// inserts a new complete row or ignores the request if the record already exists
+// mark tutorial complete for current user
 
 require_once '../config/config.php';
 
-// tell the browser this response is json
+// json response header
 header('Content-Type: application/json');
 
-// only allow post requests to reach this endpoint
+// POST only
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
     exit();
 }
 
-// the user must be logged in and must have the viewer role
+// require viewer login
 if (!isLoggedIn()) {
     echo json_encode(['success' => false, 'redirect' => SITE_URL . '/auth/login.php']);
     exit();
@@ -24,41 +23,41 @@ if (!isViewer()) {
     exit();
 }
 
-// read the json body if the browser sent one otherwise fall back to post fields
+// parse json body or fall back to POST fields
 $data = json_decode(file_get_contents('php://input'), true);
 if (!is_array($data)) {
-    // fall back to regular formencoded post body
+    // form-encoded fallback
     $data = $_POST;
 }
 
-// accept the csrf token from the xcsrftoken header first then fall back to the body/post field
+// csrf from header or body
 $csrf_token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $data['csrf_token'] ?? '';
 
-// reject the request if the csrf token is missing or does not match the session token
+// reject bad csrf token
 if (empty($csrf_token) || !verifyCSRFToken($csrf_token)) {
     echo json_encode(['success' => false, 'message' => 'Invalid security token']);
     exit();
 }
 
-// make sure the tutorial id is a positive integer
+// validate tutorial id
 $tutorial_id = (int)($data['tutorial_id'] ?? 0);
 if (!$tutorial_id) {
     echo json_encode(['success' => false, 'message' => 'Invalid tutorial']);
     exit();
 }
 
-// get the current user id and db connect
+// get user id and connect
 $user_id = getCurrentUserId();
 $db      = new Database();
 $conn    = $db->connect();
 
-// stop here if the database could not be reached
+// abort on db failure
 if (!$conn) {
     echo json_encode(['success' => false, 'message' => 'Database error']);
     exit();
 }
 
-// confirm the tutorial actually exists and is published before recording progress
+// confirm tutorial exists and is published
 $exists = $conn->prepare(
     "SELECT tutorial_id FROM dbProj_tutorials
      WHERE tutorial_id = :id AND status = 'published' LIMIT 1"
@@ -71,10 +70,10 @@ if (!$exists->fetch()) {
 }
 
 try {
-    // wrap the upsert in a transaction so two simultaneous requests cannot create duplicate rows
+    // transaction prevents duplicate rows from concurrent clicks
     $conn->beginTransaction();
 
-    // lock the row while we check it so no other request can race with this one
+    // row lock prevents race condition
     $checkStmt = $conn->prepare(
         "SELECT activity_id FROM dbProj_user_activity
          WHERE user_id = :uid AND tutorial_id = :tid AND activity_type = 'complete'
@@ -86,11 +85,11 @@ try {
     $existing = $checkStmt->fetch();
 
     if ($existing) {
-        // the tutorial is already marked complete so nothing more needs to be done
+        // already complete — nothing to do
         $conn->commit();
         echo json_encode(['success' => true]);
     } else {
-        // insert a new complete record for this user and tutorial
+        // insert complete activity row
         $insStmt = $conn->prepare(
             "INSERT INTO dbProj_user_activity (user_id, tutorial_id, activity_type, activity_date)
              VALUES (:uid, :tid, 'complete', NOW())"
@@ -104,7 +103,6 @@ try {
     }
 
 } catch (PDOException $e) {
-    // something went wrong so roll back to keep the data clean
     $conn->rollBack();
     echo json_encode(['success' => false, 'message' => 'Database error. Please try again.']);
 }
